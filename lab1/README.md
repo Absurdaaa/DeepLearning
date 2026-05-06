@@ -39,7 +39,7 @@ lab1/
 ## 运行
 
 ```bash
-python3 lab1/train.py --model simple_cnn --epochs 10 --batch-size 128
+python3 lab1/train.py --model simple_cnn --epochs 100 --batch-size 128
 python3 lab1/train.py --model resnet18 --epochs 20 --batch-size 128
 python3 lab1/train.py --model vgg11_bn --epochs 20 --batch-size 64
 ```
