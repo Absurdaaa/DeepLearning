@@ -1,2 +1,7 @@
 lab1/data/
 *.pth
+*/__pycache__/
+*.pyc
+
+outputs/
+.DS_Store
