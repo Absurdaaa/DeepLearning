@@ -37,6 +37,7 @@ def main() -> None:
     print(f"Train size: {len(train_loader.dataset)}")
     print(f"Val size: {len(val_loader.dataset)}")
     print(f"Test size: {len(test_loader.dataset)}")
+    print(f"W&B logging: {'enabled' if config.use_wandb else 'disabled'}")
     print("\nModel structure:\n")
     print(model)
 
@@ -46,9 +47,11 @@ def main() -> None:
 
     print(f"\nSaved outputs to: {output_dir}")
     print(f"- model structure: {output_dir / 'model_structure.txt'}")
+    print(f"- epoch logs: {output_dir / 'epoch_metrics.csv'}")
     print(f"- sample images: {output_dir / 'train_samples.png'}")
-    print(f"- curves: {output_dir / 'training_curves.png'}")
-    print(f"- predictions: {output_dir / 'val_predictions.png'}")
+    if config.save_plots:
+        print(f"- curves: {output_dir / 'training_curves.png'}")
+        print(f"- predictions: {output_dir / 'val_predictions.png'}")
     print(f"- checkpoint: {output_dir / 'best_model.pth'}")
 
 

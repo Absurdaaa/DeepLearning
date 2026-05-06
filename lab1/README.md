@@ -39,9 +39,21 @@ lab1/
 ## 运行
 
 ```bash
-python3 lab1/train.py --model simple_cnn --epochs 100 --batch-size 128
-python3 lab1/train.py --model resnet18 --epochs 20 --batch-size 128
-python3 lab1/train.py --model vgg11_bn --epochs 20 --batch-size 64
+python3 lab1/train.py --model simple_cnn --optimizer sgd --epochs 10 --batch-size 128
+python3 lab1/train.py --model resnet18 --optimizer adam --epochs 20 --batch-size 128
+python3 lab1/train.py --model vgg11_bn --optimizer adamw --epochs 20 --batch-size 64
+```
+
+如果需要额外保存曲线图和预测图：
+
+```bash
+python3 lab1/train.py --save-plots
+```
+
+如果需要同步到 Weights & Biases：
+
+```bash
+python3 lab1/train.py --use-wandb --wandb-project cifar10-lab1
 ```
 
 如果本地没有解压好的数据：
@@ -49,6 +61,19 @@ python3 lab1/train.py --model vgg11_bn --epochs 20 --batch-size 64
 ```bash
 python3 lab1/train.py --download
 ```
+
+优化器支持：
+
+- `sgd`
+- `adam`
+- `adamw`
+
+W&B 相关参数：
+
+- `--use-wandb`
+- `--wandb-project`
+- `--wandb-entity`
+- `--wandb-run-name`
 
 ## 输出
 
@@ -62,10 +87,16 @@ lab1/outputs/<model_name>/
 
 - `model_structure.txt`
 - `train_samples.png`
-- `training_curves.png`
-- `val_predictions.png`
+- `epoch_metrics.csv`：每个 epoch 的 `train_loss`、`train_acc`、`val_loss`、`val_acc`
 - `best_model.pth`
 - `metrics.txt`
+- `class_accuracy.txt`
+- `class_accuracy.csv`
+
+如果加了 `--save-plots`，还会额外保存：
+
+- `training_curves.png`
+- `val_predictions.png`
 
 ## 扩展模型
 
