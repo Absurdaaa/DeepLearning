@@ -58,12 +58,14 @@ def plot_training_curves(history: Dict[str, List[float]], output_path: Path) -> 
     axes[0].grid(True, linestyle="--", alpha=0.4)
     axes[0].legend()
 
-    axes[1].plot(epochs, history["val_acc"], marker="o", color="tab:green")
-    axes[1].set_title("Validation Accuracy")
+    axes[1].plot(epochs, history["train_acc"], marker="o", label="Train Acc")
+    axes[1].plot(epochs, history["val_acc"], marker="o", label="Val Acc")
+    axes[1].set_title("Accuracy Curves")
     axes[1].set_xlabel("Epoch")
     axes[1].set_ylabel("Accuracy")
     axes[1].set_ylim(0.0, 1.0)
     axes[1].grid(True, linestyle="--", alpha=0.4)
+    axes[1].legend()
 
     fig.tight_layout()
     fig.savefig(output_path, dpi=200, bbox_inches="tight")

@@ -16,6 +16,7 @@ class ExperimentConfig:
     model: str
     epochs: int
     batch_size: int
+    optimizer: str
     lr: float
     momentum: float
     weight_decay: float
@@ -26,6 +27,11 @@ class ExperimentConfig:
     output_dir: Path
     device: str
     download: bool
+    save_plots: bool
+    use_wandb: bool
+    wandb_project: str
+    wandb_entity: str | None
+    wandb_run_name: str | None
 
 
 def build_parser(project_root: Path) -> argparse.ArgumentParser:
@@ -38,6 +44,13 @@ def build_parser(project_root: Path) -> argparse.ArgumentParser:
     )
     parser.add_argument("--epochs", type=int, default=10, help="Training epochs.")
     parser.add_argument("--batch-size", type=int, default=128, help="Batch size.")
+    parser.add_argument(
+        "--optimizer",
+        type=str,
+        default="sgd",
+        choices=("sgd", "adam", "adamw"),
+        help="Optimizer name.",
+    )
     parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate.")
     parser.add_argument("--momentum", type=float, default=0.9, help="SGD momentum.")
     parser.add_argument("--weight-decay", type=float, default=5e-4, help="Weight decay.")
@@ -67,6 +80,34 @@ def build_parser(project_root: Path) -> argparse.ArgumentParser:
         action="store_true",
         help="Download CIFAR-10 when local files are missing.",
     )
+    parser.add_argument(
+        "--save-plots",
+        action="store_true",
+        help="Save training curves and prediction plots.",
+    )
+    parser.add_argument(
+        "--use-wandb",
+        action="store_true",
+        help="Enable Weights & Biases logging.",
+    )
+    parser.add_argument(
+        "--wandb-project",
+        type=str,
+        default="cifar10-lab1",
+        help="Weights & Biases project name.",
+    )
+    parser.add_argument(
+        "--wandb-entity",
+        type=str,
+        default=None,
+        help="Weights & Biases entity or team name.",
+    )
+    parser.add_argument(
+        "--wandb-run-name",
+        type=str,
+        default=None,
+        help="Weights & Biases run name.",
+    )
     return parser
 
 
@@ -76,6 +117,7 @@ def parse_config(project_root: Path) -> ExperimentConfig:
         model=args.model,
         epochs=args.epochs,
         batch_size=args.batch_size,
+        optimizer=args.optimizer,
         lr=args.lr,
         momentum=args.momentum,
         weight_decay=args.weight_decay,
@@ -86,4 +128,9 @@ def parse_config(project_root: Path) -> ExperimentConfig:
         output_dir=Path(args.output_dir),
         device=args.device,
         download=args.download,
+        save_plots=args.save_plots,
+        use_wandb=args.use_wandb,
+        wandb_project=args.wandb_project,
+        wandb_entity=args.wandb_entity,
+        wandb_run_name=args.wandb_run_name,
     )

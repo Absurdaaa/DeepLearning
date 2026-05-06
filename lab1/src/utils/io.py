@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 from pathlib import Path
 from typing import Mapping
 
@@ -32,3 +33,14 @@ def save_model_summary(model: nn.Module, device: str, output_path: Path) -> None
 def save_metrics(output_path: Path, metrics: Mapping[str, object]) -> None:
     lines = [f"{key}={value}" for key, value in metrics.items()]
     output_path.write_text("\n".join(lines), encoding="utf-8")
+
+
+def save_lines(output_path: Path, lines: list[str]) -> None:
+    output_path.write_text("\n".join(lines), encoding="utf-8")
+
+
+def save_csv_rows(output_path: Path, fieldnames: list[str], rows: list[dict[str, object]]) -> None:
+    with output_path.open("w", newline="", encoding="utf-8") as file:
+        writer = csv.DictWriter(file, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
