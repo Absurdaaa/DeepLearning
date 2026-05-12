@@ -35,10 +35,12 @@ lab1/
 - `engine.py`：训练、验证、测试主循环
 - `models/`：模型定义和注册
 - `utils/`：可视化、IO、运行环境工具
+- `legacy/`：之前老师给的原始代码
 
 ## 运行
 
 ```bash
+python3 lab1/train.py --model simple_cnn --optimizer sgd --save-plots
 python3 lab1/train.py --model simple_cnn --optimizer sgd --epochs 10 --batch-size 128
 python3 lab1/train.py --model resnet18 --optimizer adam --epochs 20 --batch-size 128
 python3 lab1/train.py --model vgg11_bn --optimizer adamw --epochs 20 --batch-size 64

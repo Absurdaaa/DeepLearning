@@ -42,8 +42,8 @@ def build_parser(project_root: Path) -> argparse.ArgumentParser:
         choices=AVAILABLE_MODELS,
         help="Model name.",
     )
-    parser.add_argument("--epochs", type=int, default=10, help="Training epochs.")
-    parser.add_argument("--batch-size", type=int, default=128, help="Batch size.")
+    parser.add_argument("--epochs", type=int, default=100, help="Training epochs.")
+    parser.add_argument("--batch-size", type=int, default=512, help="Batch size.")
     parser.add_argument(
         "--optimizer",
         type=str,
@@ -51,12 +51,12 @@ def build_parser(project_root: Path) -> argparse.ArgumentParser:
         choices=("sgd", "adam", "adamw"),
         help="Optimizer name.",
     )
-    parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate.")
+    parser.add_argument("--lr", type=float, default=5e-2, help="Learning rate.")
     parser.add_argument("--momentum", type=float, default=0.9, help="SGD momentum.")
     parser.add_argument("--weight-decay", type=float, default=5e-4, help="Weight decay.")
     parser.add_argument("--val-ratio", type=float, default=0.1, help="Validation split ratio.")
     parser.add_argument("--seed", type=int, default=42, help="Random seed.")
-    parser.add_argument("--num-workers", type=int, default=2, help="DataLoader workers.")
+    parser.add_argument("--num-workers", type=int, default=8, help="DataLoader workers.")
     parser.add_argument(
         "--data-root",
         type=str,
