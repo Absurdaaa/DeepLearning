@@ -68,7 +68,7 @@ python3 lab1/sweep_lr.py --model simple_cnn --optimizer sgd --batch-size 512 --e
 如果有多张卡，也可以指定设备列表：
 
 ```bash
-python3 lab1/sweep_lr.py --model resnet20 --optimizer sgd --batch-size 512 --epochs 100 --lrs 0.2 0.1 0.05 0.02 0.01 --max-parallel 2 --devices cuda:0 cuda:1
+python sweep_lr.py --model densenet_bc_100 --optimizer sgd --batch-size 512 --epochs 100 --lrs 0.2 0.1 0.05 0.02 0.01 0.005 --max-parallel 2 --devices cuda:0 cuda:1
 ```
 
 如果需要额外保存曲线图和预测图：
