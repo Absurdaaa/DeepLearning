@@ -44,6 +44,7 @@ python3 train.py --model simple_cnn --optimizer sgd --save-plots
 python3 train.py --model simple_cnn --optimizer sgd --epochs 10 --batch-size 512
 python3 train.py --model resnet20 --optimizer sgd --lr 0.05 --run-name baseline
 python3 train.py --model densenet_bc_100 --optimizer sgd --lr 0.05
+python3 train.py --model mobilenet_v1_cifar --optimizer sgd --lr 0.05
 python3 train.py --model vgg11_bn --optimizer adamw --lr 1e-3
 ```
 
@@ -130,6 +131,8 @@ outputs/<model_name>/<run_name>/
 
 - `<sweep_name>_lr_sweep_summary.csv`
 - `<sweep_name>_best_lr.txt`
+
+重复执行同一条 `sweep_lr.py` 命令时，如果某个学习率对应目录下已经存在 `summary_metrics.csv`，脚本会自动跳过该学习率，只继续未完成的部分。
 
 ## 扩展模型
 

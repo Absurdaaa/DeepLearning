@@ -1,5 +1,3 @@
-"""CIFAR-style DenseNet-BC implementations."""
-
 from __future__ import annotations
 
 import torch

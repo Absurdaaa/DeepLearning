@@ -152,10 +152,18 @@ def collect_summary_row(summary_csv: Path) -> dict[str, str]:
     }
 
 
+def should_skip_run(summary_csv: Path) -> bool:
+    return summary_csv.exists()
+
+
 def run_training_sequential(args: argparse.Namespace) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
     for lr in args.lrs:
         cmd, summary_csv = build_training_command(args, lr)
+        if should_skip_run(summary_csv):
+            print(f"Skipping completed lr={lr}")
+            rows.append(collect_summary_row(summary_csv))
+            continue
         subprocess.run(cmd, check=True, cwd=PROJECT_ROOT)
         rows.append(collect_summary_row(summary_csv))
     return rows
@@ -176,6 +184,10 @@ def run_training_parallel(args: argparse.Namespace) -> list[dict[str, str]]:
                 assigned_device = devices[device_index % len(devices)]
                 device_index += 1
             cmd, summary_csv = build_training_command(args, lr, assigned_device)
+            if should_skip_run(summary_csv):
+                print(f"Skipping completed lr={lr}")
+                rows.append(collect_summary_row(summary_csv))
+                continue
             env = os.environ.copy()
             print(
                 f"Starting lr={lr} "
