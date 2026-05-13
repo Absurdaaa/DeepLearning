@@ -46,7 +46,7 @@ class MobileNetV1(nn.Module):
             return max(1, int(channels * width_multiplier))
 
         self.stem = nn.Sequential(
-            nn.Conv2d(3, c(32), kernel_size=3, stride=1, padding=1, bias=False),
+            nn.Conv2d(3, c(32), kernel_size=3, stride=1, padding=1, bias=False),# 论文里面步长为2，但是对于32来说，可能不太好
             nn.BatchNorm2d(c(32)),
             nn.ReLU(inplace=True),
         )
@@ -63,11 +63,11 @@ class MobileNetV1(nn.Module):
             DepthwiseSeparableConv(c(512), c(512), stride=1),
             DepthwiseSeparableConv(c(512), c(512), stride=1),
             DepthwiseSeparableConv(c(512), c(512), stride=1),
-            DepthwiseSeparableConv(c(512), c(1024), stride=2),
-            DepthwiseSeparableConv(c(1024), c(1024), stride=1),
+            # DepthwiseSeparableConv(c(512), c(1024), stride=2),
+            # DepthwiseSeparableConv(c(1024), c(1024), stride=1),# 论文里面是这样实现的，但是这里会不会太大了
         )
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(c(1024), num_classes)
+        self.fc = nn.Linear(c(512), num_classes)
 
         self._initialize_weights()
 
