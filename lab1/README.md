@@ -42,7 +42,8 @@ python3 train.py --model simple_cnn --epochs 10
 ```bash
 python3 train.py --model simple_cnn --optimizer sgd --save-plots
 python3 train.py --model simple_cnn --optimizer sgd --epochs 10 --batch-size 512
-python3 train.py --model resnet18 --optimizer sgd --lr 0.05 --run-name baseline
+python3 train.py --model resnet20 --optimizer sgd --lr 0.05 --run-name baseline
+python3 train.py --model resnet32 --optimizer sgd --lr 0.05
 python3 train.py --model vgg11_bn --optimizer adamw --lr 1e-3
 ```
 
@@ -51,7 +52,7 @@ python3 train.py --model vgg11_bn --optimizer adamw --lr 1e-3
 ```bash
 python3 sweep_lr.py --model simple_cnn --optimizer sgd --batch-size 512 --epochs 100 --lrs 0.2 0.1 0.05 0.02 0.01 0.005
 
-python3 sweep_lr.py --model resnet18 --optimizer sgd --batch-size 512 --epochs 100 --lrs 0.2 0.1 0.05 0.02 0.01
+python3 sweep_lr.py --model resnet20 --optimizer sgd --batch-size 512 --epochs 100 --lrs 0.2 0.1 0.05 0.02 0.01
 
 python3 sweep_lr.py --model vgg11_bn --optimizer adamw --batch-size 512 --epochs 100 --lrs 0.01 0.005 0.001 0.0005 0.0001
 ```
@@ -65,7 +66,7 @@ python3 lab1/sweep_lr.py --model simple_cnn --optimizer sgd --batch-size 512 --e
 如果有多张卡，也可以指定设备列表：
 
 ```bash
-python3 lab1/sweep_lr.py --model resnet18 --optimizer sgd --batch-size 512 --epochs 100 --lrs 0.2 0.1 0.05 0.02 0.01 --max-parallel 2 --devices cuda:0 cuda:1
+python3 lab1/sweep_lr.py --model resnet20 --optimizer sgd --batch-size 512 --epochs 100 --lrs 0.2 0.1 0.05 0.02 0.01 --max-parallel 2 --devices cuda:0 cuda:1
 ```
 
 如果需要额外保存曲线图和预测图：
