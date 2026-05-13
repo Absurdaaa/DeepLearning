@@ -5,8 +5,10 @@ from __future__ import annotations
 
 import argparse
 import csv
+import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Iterable
 
@@ -54,6 +56,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--wandb-project", type=str, default="cifar10-lab1", help="W&B project name.")
     parser.add_argument("--wandb-entity", type=str, default=None, help="W&B entity.")
     parser.add_argument("--sweep-name", type=str, default=None, help="Optional name for this sweep.")
+    parser.add_argument(
+        "--max-parallel",
+        type=int,
+        default=1,
+        help="Maximum number of concurrent training runs.",
+    )
+    parser.add_argument(
+        "--devices",
+        nargs="+",
+        default=None,
+        help="Optional device list, for example cuda:0 cuda:1.",
+    )
     return parser.parse_args()
 
 
@@ -62,7 +76,11 @@ def format_float_tag(value: float) -> str:
     return text.replace("-", "m").replace(".", "p")
 
 
-def run_training(args: argparse.Namespace, lr: float) -> Path:
+def build_training_command(
+    args: argparse.Namespace,
+    lr: float,
+    device: str | None = None,
+) -> tuple[list[str], Path]:
     run_name = f"{args.sweep_name or 'sweep'}_{args.optimizer}_lr{format_float_tag(lr)}_bs{args.batch_size}"
     cmd = [
         sys.executable,
@@ -90,8 +108,9 @@ def run_training(args: argparse.Namespace, lr: float) -> Path:
         "--output-dir",
         args.output_dir,
     ]
-    if args.device:
-        cmd.extend(["--device", args.device])
+    selected_device = device or args.device
+    if selected_device:
+        cmd.extend(["--device", selected_device])
     if args.download:
         cmd.append("--download")
     if args.save_plots:
@@ -106,15 +125,90 @@ def run_training(args: argparse.Namespace, lr: float) -> Path:
         )
         if args.wandb_entity:
             cmd.extend(["--wandb-entity", args.wandb_entity])
-
-    subprocess.run(cmd, check=True, cwd=PROJECT_ROOT)
-    return Path(args.output_dir) / args.model / run_name / "summary_metrics.csv"
+    summary_csv = Path(args.output_dir) / args.model / run_name / "summary_metrics.csv"
+    return cmd, summary_csv
 
 
 def load_single_row_csv(path: Path) -> dict[str, str]:
     with path.open("r", encoding="utf-8", newline="") as file:
         reader = csv.DictReader(file)
         return next(reader)
+
+
+def collect_summary_row(summary_csv: Path) -> dict[str, str]:
+    summary = load_single_row_csv(summary_csv)
+    return {
+        "run_name": summary_csv.parent.name,
+        "optimizer": summary["optimizer"],
+        "learning_rate": summary["learning_rate"],
+        "best_val_acc": summary["best_val_acc"],
+        "best_val_epoch": summary["best_val_epoch"],
+        "time_to_best_val_sec": summary["time_to_best_val_sec"],
+        "total_train_time_sec": summary["total_train_time_sec"],
+        "test_acc": summary["test_acc"],
+        "test_loss": summary["test_loss"],
+        "param_count": summary["param_count"],
+        "flops_per_image": summary["flops_per_image"],
+    }
+
+
+def run_training_sequential(args: argparse.Namespace) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    for lr in args.lrs:
+        cmd, summary_csv = build_training_command(args, lr)
+        subprocess.run(cmd, check=True, cwd=PROJECT_ROOT)
+        rows.append(collect_summary_row(summary_csv))
+    return rows
+
+
+def run_training_parallel(args: argparse.Namespace) -> list[dict[str, str]]:
+    jobs: list[dict[str, object]] = []
+    rows: list[dict[str, str]] = []
+    devices = args.devices or []
+    device_index = 0
+
+    pending_lrs = list(args.lrs)
+    while pending_lrs or jobs:
+        while pending_lrs and len(jobs) < args.max_parallel:
+            lr = pending_lrs.pop(0)
+            assigned_device = None
+            if devices:
+                assigned_device = devices[device_index % len(devices)]
+                device_index += 1
+            cmd, summary_csv = build_training_command(args, lr, assigned_device)
+            env = os.environ.copy()
+            print(
+                f"Starting lr={lr} "
+                f"{f'on {assigned_device}' if assigned_device else ''}".strip()
+            )
+            process = subprocess.Popen(cmd, cwd=PROJECT_ROOT, env=env)
+            jobs.append(
+                {
+                    "lr": lr,
+                    "process": process,
+                    "summary_csv": summary_csv,
+                    "device": assigned_device,
+                }
+            )
+
+        time.sleep(2.0)
+        still_running: list[dict[str, object]] = []
+        for job in jobs:
+            process = job["process"]
+            return_code = process.poll()
+            if return_code is None:
+                still_running.append(job)
+                continue
+            if return_code != 0:
+                raise subprocess.CalledProcessError(return_code, process.args)
+            lr = job["lr"]
+            summary_csv = job["summary_csv"]
+            print(f"Finished lr={lr}")
+            rows.append(collect_summary_row(summary_csv))
+        jobs = still_running
+
+    rows.sort(key=lambda row: float(row["learning_rate"]), reverse=True)
+    return rows
 
 
 def summarize_runs(model: str, rows: Iterable[dict[str, str]], output_dir: Path, sweep_name: str) -> None:
@@ -162,26 +256,10 @@ def summarize_runs(model: str, rows: Iterable[dict[str, str]], output_dir: Path,
 def main() -> None:
     args = parse_args()
     sweep_name = args.sweep_name or f"{args.model}_{args.optimizer}"
-    rows: list[dict[str, str]] = []
-
-    for lr in args.lrs:
-        summary_csv = run_training(args, lr)
-        summary = load_single_row_csv(summary_csv)
-        rows.append(
-            {
-                "run_name": summary_csv.parent.name,
-                "optimizer": summary["optimizer"],
-                "learning_rate": summary["learning_rate"],
-                "best_val_acc": summary["best_val_acc"],
-                "best_val_epoch": summary["best_val_epoch"],
-                "time_to_best_val_sec": summary["time_to_best_val_sec"],
-                "total_train_time_sec": summary["total_train_time_sec"],
-                "test_acc": summary["test_acc"],
-                "test_loss": summary["test_loss"],
-                "param_count": summary["param_count"],
-                "flops_per_image": summary["flops_per_image"],
-            }
-        )
+    if args.max_parallel <= 1:
+        rows = run_training_sequential(args)
+    else:
+        rows = run_training_parallel(args)
 
     summarize_runs(args.model, rows, Path(args.output_dir), sweep_name)
 
