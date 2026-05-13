@@ -44,7 +44,7 @@ python3 train.py --model simple_cnn --optimizer sgd --save-plots
 python3 train.py --model simple_cnn --optimizer sgd --epochs 10 --batch-size 512
 python3 train.py --model resnet20 --optimizer sgd --lr 0.05 --run-name baseline
 python3 train.py --model densenet_bc_100 --optimizer sgd --lr 0.05
-python3 train.py --model mobilenet_v1_cifar --optimizer sgd --lr 0.05
+python3 train.py --model mobilenet_v1 --optimizer sgd --lr 0.05
 python3 train.py --model vgg11_bn --optimizer adamw --lr 1e-3
 ```
 
@@ -70,6 +70,8 @@ python3 lab1/sweep_lr.py --model simple_cnn --optimizer sgd --batch-size 512 --e
 
 ```bash
 python sweep_lr.py --model densenet_bc_100 --optimizer sgd --batch-size 512 --epochs 100 --lrs 0.2 0.1 0.05 0.02 0.01 0.005 --max-parallel 2 --devices cuda:0 cuda:1
+
+python sweep_lr.py --model mobilenet_v1 --optimizer sgd --batch-size 512 --epochs 100 --lrs 0.2 0.1 0.05 0.02 0.01 0.005 --max-parallel 2 --devices cuda:0 cuda:1
 ```
 
 如果需要额外保存曲线图和预测图：

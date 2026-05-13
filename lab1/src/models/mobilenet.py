@@ -91,5 +91,5 @@ class MobileNetV1(nn.Module):
         return x
 
 
-def mobilenet_v1_cifar(num_classes: int = 10) -> MobileNetV1:
+def mobilenet_v1(num_classes: int = 10) -> MobileNetV1:
     return MobileNetV1(num_classes=num_classes, width_multiplier=1.0)
