@@ -43,7 +43,7 @@ python3 train.py --model simple_cnn --epochs 10
 python3 train.py --model simple_cnn --optimizer sgd --save-plots
 python3 train.py --model simple_cnn --optimizer sgd --epochs 10 --batch-size 512
 python3 train.py --model resnet20 --optimizer sgd --lr 0.05 --run-name baseline
-python3 train.py --model resnet32 --optimizer sgd --lr 0.05
+python3 train.py --model densenet_bc_100 --optimizer sgd --lr 0.05
 python3 train.py --model vgg11_bn --optimizer adamw --lr 1e-3
 ```
 
