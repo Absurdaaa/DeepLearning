@@ -14,6 +14,7 @@ from .models import AVAILABLE_MODELS
 @dataclass
 class ExperimentConfig:
     model: str
+    run_name: str | None
     epochs: int
     batch_size: int
     optimizer: str
@@ -41,6 +42,12 @@ def build_parser(project_root: Path) -> argparse.ArgumentParser:
         default="simple_cnn",
         choices=AVAILABLE_MODELS,
         help="Model name.",
+    )
+    parser.add_argument(
+        "--run-name",
+        type=str,
+        default=None,
+        help="Optional run name for output directory and logging.",
     )
     parser.add_argument("--epochs", type=int, default=100, help="Training epochs.")
     parser.add_argument("--batch-size", type=int, default=512, help="Batch size.")
@@ -115,6 +122,7 @@ def parse_config(project_root: Path) -> ExperimentConfig:
     args = build_parser(project_root).parse_args()
     return ExperimentConfig(
         model=args.model,
+        run_name=args.run_name,
         epochs=args.epochs,
         batch_size=args.batch_size,
         optimizer=args.optimizer,

@@ -41,9 +41,19 @@ lab1/
 
 ```bash
 python3 lab1/train.py --model simple_cnn --optimizer sgd --save-plots
-python3 lab1/train.py --model simple_cnn --optimizer sgd --epochs 10 --batch-size 128
-python3 lab1/train.py --model resnet18 --optimizer adam --epochs 20 --batch-size 128
-python3 lab1/train.py --model vgg11_bn --optimizer adamw --epochs 20 --batch-size 64
+python3 lab1/train.py --model simple_cnn --optimizer sgd --epochs 10 --batch-size 512
+python3 lab1/train.py --model resnet18 --optimizer sgd --lr 0.05 --run-name baseline
+python3 lab1/train.py --model vgg11_bn --optimizer adamw --lr 1e-3
+```
+
+如果你要固定 `bs=512` 批量扫学习率：
+
+```bash
+python3 lab1/sweep_lr.py --model simple_cnn --optimizer sgd --batch-size 512 --epochs 100 --lrs 0.2 0.1 0.05 0.02 0.01
+
+python3 lab1/sweep_lr.py --model resnet18 --optimizer sgd --batch-size 512 --epochs 100 --lrs 0.2 0.1 0.05 0.02 0.01
+
+python3 lab1/sweep_lr.py --model vgg11_bn --optimizer adamw --batch-size 512 --epochs 100 --lrs 0.01 0.005 0.001 0.0005 0.0001
 ```
 
 如果需要额外保存曲线图和预测图：
@@ -82,14 +92,15 @@ W&B 相关参数：
 默认输出到：
 
 ```bash
-lab1/outputs/<model_name>/
+lab1/outputs/<model_name>/<run_name>/
 ```
 
 包括：
 
 - `model_structure.txt`
 - `train_samples.png`
-- `epoch_metrics.csv`：每个 epoch 的 `train_loss`、`train_acc`、`val_loss`、`val_acc`
+- `epoch_metrics.csv`：每个 epoch 的 `train_loss`、`train_acc`、`val_loss`、`val_acc`、单轮耗时、累计训练耗时
+- `summary_metrics.csv`：参数量、FLOPs、总训练时间、推理时间、收敛轮次、准确率等汇总指标
 - `best_model.pth`
 - `metrics.txt`
 - `class_accuracy.txt`
@@ -99,6 +110,11 @@ lab1/outputs/<model_name>/
 
 - `training_curves.png`
 - `val_predictions.png`
+
+学习率扫描脚本还会额外输出：
+
+- `<sweep_name>_lr_sweep_summary.csv`
+- `<sweep_name>_best_lr.txt`
 
 ## 扩展模型
 

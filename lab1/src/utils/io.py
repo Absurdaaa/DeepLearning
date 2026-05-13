@@ -44,3 +44,7 @@ def save_csv_rows(output_path: Path, fieldnames: list[str], rows: list[dict[str,
         writer = csv.DictWriter(file, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(rows)
+
+
+def save_single_row_csv(output_path: Path, row: dict[str, object]) -> None:
+    save_csv_rows(output_path, list(row.keys()), [row])
