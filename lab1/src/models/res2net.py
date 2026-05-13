@@ -1,4 +1,4 @@
-"""CIFAR-style Res2Net implementations."""
+"""CIFAR-style Res2Net implementations based on the ResNeXt-29 baseline."""
 
 from __future__ import annotations
 
@@ -6,13 +6,19 @@ import torch
 import torch.nn as nn
 
 
-def conv3x3(in_channels: int, out_channels: int, stride: int = 1) -> nn.Conv2d:
+def conv3x3(
+    in_channels: int,
+    out_channels: int,
+    stride: int = 1,
+    groups: int = 1,
+) -> nn.Conv2d:
     return nn.Conv2d(
         in_channels,
         out_channels,
         kernel_size=3,
         stride=stride,
         padding=1,
+        groups=groups,
         bias=False,
     )
 
@@ -25,22 +31,23 @@ class Bottle2neck(nn.Module):
         in_channels: int,
         base_channels: int,
         stride: int = 1,
-        base_width: int = 26,
+        base_width: int = 64,
         scale: int = 4,
+        cardinality: int = 8,
         stype: str = "normal",
     ) -> None:
         super().__init__()
         if scale < 2:
-            # 多尺度多尺度！！！
             raise ValueError("Res2Net scale must be at least 2.")
 
-        width = max(1, int(base_channels * (base_width / 16.0)))
+        width = cardinality * base_width
         inner_channels = width * scale
         out_channels = base_channels * self.expansion
 
         self.width = width
         self.scale = scale
         self.stype = stype
+        self.cardinality = cardinality
         self.relu = nn.ReLU(inplace=True)
 
         self.conv1 = nn.Conv2d(in_channels, inner_channels, kernel_size=1, bias=False)
@@ -48,7 +55,7 @@ class Bottle2neck(nn.Module):
 
         self.convs = nn.ModuleList(
             [
-                conv3x3(width, width, stride=stride)
+                conv3x3(width, width, stride=stride, groups=cardinality)
                 for _ in range(scale - 1)
             ]
         )
@@ -115,25 +122,27 @@ class Res2Net(nn.Module):
         self,
         layers: list[int],
         num_classes: int = 10,
-        base_width: int = 26,
+        base_width: int = 64,
         scale: int = 4,
+        cardinality: int = 8,
     ) -> None:
         super().__init__()
-        self.in_channels = 16
+        self.in_channels = 64
         self.base_width = base_width
         self.scale = scale
+        self.cardinality = cardinality
 
         self.stem = nn.Sequential(
-            conv3x3(3, 16),
-            nn.BatchNorm2d(16),
+            nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.BatchNorm2d(64),
             nn.ReLU(inplace=True),
         )
 
-        self.layer1 = self._make_layer(base_channels=16, blocks=layers[0], stride=1)
-        self.layer2 = self._make_layer(base_channels=32, blocks=layers[1], stride=2)
-        self.layer3 = self._make_layer(base_channels=64, blocks=layers[2], stride=2)
+        self.layer1 = self._make_layer(base_channels=64, blocks=layers[0], stride=1)
+        self.layer2 = self._make_layer(base_channels=128, blocks=layers[1], stride=2)
+        self.layer3 = self._make_layer(base_channels=256, blocks=layers[2], stride=2)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(64 * Bottle2neck.expansion, num_classes)
+        self.fc = nn.Linear(256 * Bottle2neck.expansion, num_classes)
 
         self._initialize_weights()
 
@@ -145,6 +154,7 @@ class Res2Net(nn.Module):
                 stride=stride,
                 base_width=self.base_width,
                 scale=self.scale,
+                cardinality=self.cardinality,
                 stype="stage",
             )
         ]
@@ -158,6 +168,7 @@ class Res2Net(nn.Module):
                     stride=1,
                     base_width=self.base_width,
                     scale=self.scale,
+                    cardinality=self.cardinality,
                     stype="normal",
                 )
             )
@@ -185,5 +196,11 @@ class Res2Net(nn.Module):
         return x
 
 
-def res2net20(num_classes: int = 10) -> Res2Net:
-    return Res2Net(layers=[3, 3, 3], num_classes=num_classes, base_width=26, scale=4)
+def res2net29_8c64w(num_classes: int = 10) -> Res2Net:
+    return Res2Net(
+        layers=[3, 3, 3],
+        num_classes=num_classes,
+        base_width=64,
+        scale=4,
+        cardinality=8,
+    )
