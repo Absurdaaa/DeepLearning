@@ -56,6 +56,18 @@ python3 sweep_lr.py --model resnet18 --optimizer sgd --batch-size 512 --epochs 1
 python3 sweep_lr.py --model vgg11_bn --optimizer adamw --batch-size 512 --epochs 100 --lrs 0.01 0.005 0.001 0.0005 0.0001
 ```
 
+如果显存够，可以并行扫：
+
+```bash
+python3 lab1/sweep_lr.py --model simple_cnn --optimizer sgd --batch-size 512 --epochs 100 --lrs 0.2 0.1 0.05 0.02 0.01 --max-parallel 2
+```
+
+如果有多张卡，也可以指定设备列表：
+
+```bash
+python3 lab1/sweep_lr.py --model resnet18 --optimizer sgd --batch-size 512 --epochs 100 --lrs 0.2 0.1 0.05 0.02 0.01 --max-parallel 2 --devices cuda:0 cuda:1
+```
+
 如果需要额外保存曲线图和预测图：
 
 ```bash
