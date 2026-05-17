@@ -7,3 +7,8 @@ outputs/
 .DS_Store
 lab1/实验模板/
 lab1/scripts/
+
+lab2/.matplotlib/
+lab2/实验模板/
+
+lab3/实验模板/
