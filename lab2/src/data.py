@@ -14,6 +14,7 @@ from .constants import ALLOWED_CHARACTERS, NUM_CHARACTERS
 
 
 def unicode_to_ascii(text: str) -> str:
+    # 先做 Unicode 标准化，再去掉重音符号；不在词表中的字符统一映射为 "_"
     normalized = unicodedata.normalize("NFD", text.strip())
     filtered = []
     for char in normalized:
@@ -28,6 +29,7 @@ def letter_to_index(letter: str) -> int:
 
 
 def line_to_tensor(line: str) -> torch.Tensor:
+    # 把名字编码成 [seq_len, num_characters] 的 one-hot 序列
     tensor = torch.zeros(len(line), NUM_CHARACTERS, dtype=torch.float32)
     for index, letter in enumerate(line):
         tensor[index, letter_to_index(letter)] = 1.0
@@ -58,6 +60,7 @@ class NamesDataset(Dataset[NameSample]):
         self.samples: list[NameSample] = []
 
         for label_index, path in enumerate(text_files):
+            # 每个 txt 文件对应一个类别，文件中的每一行是一个名字样本
             for raw_line in path.read_text(encoding="utf-8").splitlines():
                 name = unicode_to_ascii(raw_line)
                 if not name:
@@ -79,6 +82,7 @@ class NamesDataset(Dataset[NameSample]):
 
 
 def collate_names(batch: list[NameSample]) -> dict[str, object]:
+    # pack_padded_sequence 要求按长度降序排列，这里在组 batch 时一次性处理
     batch = sorted(batch, key=lambda item: item.sequence.size(0), reverse=True)
     lengths = torch.tensor([item.sequence.size(0) for item in batch], dtype=torch.long)
     max_length = int(lengths.max().item())
@@ -91,6 +95,7 @@ def collate_names(batch: list[NameSample]) -> dict[str, object]:
 
     for batch_index, item in enumerate(batch):
         seq_len = item.sequence.size(0)
+        # 不足 max_length 的尾部保持 0，相当于 padding
         sequences[:seq_len, batch_index, :] = item.sequence
         names.append(item.name)
         label_names.append(item.label_name)
@@ -114,6 +119,7 @@ def build_dataloaders(config: ExperimentConfig):
     if min(train_size, val_size, test_size) <= 0:
         raise ValueError("Current split ratios produce an empty split. Adjust train_ratio/val_ratio.")
 
+    # 固定随机种子，保证 train/val/test 划分可复现
     generator = torch.Generator().manual_seed(config.seed)
     train_set, val_set, test_set = random_split(dataset, [train_size, val_size, test_size], generator=generator)
 

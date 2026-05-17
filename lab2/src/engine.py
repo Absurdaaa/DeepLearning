@@ -27,6 +27,7 @@ def build_optimizer(model: nn.Module, config: ExperimentConfig) -> torch.optim.O
 
 
 def move_batch_to_device(batch: dict[str, object], device: torch.device) -> dict[str, object]:
+    # 名字字符串和标签名仅用于日志，不需要搬到设备上
     return {
         "sequences": batch["sequences"].to(device),
         "lengths": batch["lengths"].to(device),
@@ -66,6 +67,7 @@ def run_epoch(
 
         if is_training:
             loss.backward()
+            # RNN/LSTM 在序列任务中更容易梯度爆炸，裁剪可以提高训练稳定性
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0)
             optimizer.step()
 
@@ -76,6 +78,7 @@ def run_epoch(
         total_examples += batch_size
 
         if confusion is not None:
+            # 混淆矩阵按“真实类别 -> 预测类别”累计，后面可画预测矩阵图
             for target, pred in zip(labels.cpu(), predictions.cpu()):
                 confusion[target.item(), pred.item()] += 1
 
@@ -154,6 +157,7 @@ def run_training(
         )
 
         if val_acc > best_val_acc:
+            # 按验证集准确率保存最佳模型，后续测试与报告都基于这一版参数
             best_val_acc = val_acc
             best_val_loss = val_loss
             best_epoch = epoch
@@ -165,9 +169,11 @@ def run_training(
         raise RuntimeError("Training did not produce a checkpoint.")
 
     model.load_state_dict(best_state)
+    # 训练结束后重新加载验证集最优权重，再在测试集上做最终评估
     test_loss, test_acc, test_confusion = evaluate(model, test_loader, criterion, config.device, len(class_names))
     inference_metrics = measure_inference_time(model, test_loader, config.device)
     param_count, trainable_param_count = count_parameters(model)
+    # 这里取测试集平均名字长度，作为 RNN/LSTM 近似 FLOPs 估计的序列长度基准
     avg_length = sum(len(name) for batch in test_loader for name in batch["names"]) / len(test_loader.dataset)
 
     total_time = time.time() - start_time
@@ -204,6 +210,7 @@ def run_training(
 
     save_epoch_metrics(history, output_dir / "epoch_metrics.csv")
     save_summary_metrics(summary, output_dir / "summary_metrics.csv")
+    # 同时保存图像版和 CSV 版，方便后期统一画图或写报告表格
     save_confusion_csv(best_val_confusion, class_names, output_dir / "val_confusion_matrix.csv")
     save_confusion_csv(test_confusion, class_names, output_dir / "test_confusion_matrix.csv")
     save_class_accuracy(build_class_accuracy(test_confusion, class_names), output_dir / "class_accuracy.csv")

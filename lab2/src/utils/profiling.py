@@ -14,6 +14,7 @@ def count_parameters(model) -> tuple[int, int]:
 
 
 def estimate_flops_per_sample(model_name: str, input_size: int, hidden_size: int, output_size: int, avg_length: float) -> float:
+    # RNN/LSTM 的 FLOPs 这里使用解析式近似估算，便于做相对比较，不是严格 profiler 数值
     sequence_length = max(avg_length, 1.0)
     if model_name == "rnn":
         recurrent_flops = 2.0 * (input_size + hidden_size) * hidden_size
@@ -49,6 +50,7 @@ def measure_inference_time(model, loader, device: torch.device, warmup_steps: in
             _ = model(sequences, lengths)
         if device.type == "cuda":
             torch.cuda.synchronize(device)
+        # 预热后再计时，减少首次调用带来的额外开销
         start = time.perf_counter()
         total_samples = 0
         measured_batches = 0
