@@ -1,16 +1,46 @@
-# CIFAR-10 Training Project
+# Lab1 Project Guide
 
-入口：
+本目录已经按“代码 / 数据 / 结果 / 报告”分开整理，便于提交和查阅。
 
-```bash
-python3 train.py --model simple_cnn --epochs 10
-```
-
-## 结构
+## 顶层结构
 
 ```text
+lab1/
+├── code/         # 所有实验代码
+├── data/         # CIFAR-10 数据
+├── outputs/      # 训练输出、日志、权重
+├── docs/         # 实验要求与其他文档
+├── 实验模板/      # LaTeX 报告、图片、表格、参考文献
+└── README.md
+```
 
+## 教师快速定位
+
+如果只需要快速检查本次实验代码，建议优先查看：
+
+- `code/train.py`
+  - 单次训练入口
+- `code/sweep_lr.py`
+  - 学习率扫描入口
+- `code/src/models/`
+  - 各模型实现：`simple_cnn.py`、`resnet.py`、`densenet.py`、`mobilenet.py`、`res2net.py`
+- `code/src/engine.py`
+  - 训练、验证、测试主循环
+- `code/src/data.py`
+  - 数据集加载与划分
+- `code/scripts/generate_report_assets.py`
+  - 报告图表生成
+- `code/scripts/generate_gradcam_report.py`
+  - Grad-CAM 可视化生成
+- `实验模板/main.tex`
+  - 实验报告正文
+
+## code/ 结构
+
+```text
+code/
 ├── train.py
+├── sweep_lr.py
 ├── src/
 │   ├── config.py
 │   ├── constants.py
@@ -18,134 +48,83 @@ python3 train.py --model simple_cnn --epochs 10
 │   ├── engine.py
 │   ├── models/
 │   │   ├── registry.py
-│   │   └── simple_cnn.py
+│   │   ├── simple_cnn.py
+│   │   ├── resnet.py
+│   │   ├── densenet.py
+│   │   ├── mobilenet.py
+│   │   └── res2net.py
 │   └── utils/
 │       ├── io.py
+│       ├── paths.py
 │       ├── plotting.py
-│       └── runtime.py
-├── data/
-└── outputs/
+│       ├── profiling.py
+│       ├── runtime.py
+│       └── wandb_logger.py
+├── scripts/
+│   ├── generate_report_assets.py
+│   ├── generate_gradcam_report.py
+│   └── plot_all_run_curves.py
+└── legacy/
+    ├── cnn-pytorch-cifar10.py
+    └── cnn-pytorch-cifar10.ipynb
 ```
 
-## 命名说明
+## 运行方式
 
-- `train.py`：入口脚本，避免 `train_cifar10.py` 这种重复命名
-- `src/`：项目源码目录，替代过长的 `cifar10_framework/`
-- `data.py`：数据加载和划分
-- `engine.py`：训练、验证、测试主循环
-- `models/`：模型定义和注册
-- `utils/`：可视化、IO、运行环境工具
-- `legacy/`：之前老师给的原始代码
-
-## 运行
+单次训练：
 
 ```bash
-python3 train.py --model simple_cnn --optimizer sgd --save-plots
-python3 train.py --model simple_cnn --optimizer sgd --epochs 10 --batch-size 512
-python3 train.py --model resnet20 --optimizer sgd --lr 0.05 --run-name baseline
-python3 train.py --model densenet_bc_100 --optimizer sgd --lr 0.05
-python3 train.py --model mobilenet_v1 --optimizer sgd --lr 0.05
-python3 train.py --model vgg11_bn --optimizer adamw --lr 1e-3
+python3 code/train.py --model simple_cnn --optimizer sgd --epochs 10
+python3 code/train.py --model resnet20 --optimizer sgd --lr 0.05
+python3 code/train.py --model densenet_bc_100 --optimizer sgd --lr 0.2
+python3 code/train.py --model mobilenet_v1 --optimizer sgd --lr 0.05
+python3 code/train.py --model res2net29_8c64w --optimizer sgd --lr 0.05
 ```
 
-如果你要固定 `bs=512` 批量扫学习率：
+学习率扫描：
 
 ```bash
-python3 sweep_lr.py --model simple_cnn --optimizer sgd --batch-size 512 --epochs 100 --lrs 0.2 0.1 0.05 0.02 0.01 0.005
-
-python3 sweep_lr.py --model resnet20 --optimizer sgd --batch-size 512 --epochs 100 --lrs 0.2 0.1 0.05 0.02 0.01
-
-python3 sweep_lr.py --model vgg11_bn --optimizer adamw --batch-size 512 --epochs 100 --lrs 0.01 0.005 0.001 0.0005 0.0001
+python3 code/sweep_lr.py --model simple_cnn --optimizer sgd --batch-size 512 --epochs 100 --lrs 0.2 0.1 0.05 0.02 0.01 0.005
+python3 code/sweep_lr.py --model resnet20 --optimizer sgd --batch-size 512 --epochs 100 --lrs 0.2 0.1 0.05 0.02 0.01 0.005
 ```
 
-如果显存够，可以并行扫：
+报告资源生成：
 
 ```bash
-python3 lab1/sweep_lr.py --model simple_cnn --optimizer sgd --batch-size 512 --epochs 100 --lrs 0.2 0.1 0.05 0.02 0.01 
-
-
+python3 code/scripts/generate_report_assets.py
+python3 code/scripts/generate_gradcam_report.py
 ```
 
-如果有多张卡，也可以指定设备列表：
+## 输出说明
 
-```bash
-python sweep_lr.py --model densenet_bc_100 --optimizer sgd --batch-size 512 --epochs 100 --lrs 0.2 0.1 0.05 0.02 0.01 0.005 --max-parallel 2 --devices cuda:0 cuda:1
+训练输出默认保存在：
 
-python sweep_lr.py --model res2net29_8c64w --optimizer sgd --batch-size 512 --epochs 100 --lrs 0.2 0.1 0.05 0.02 0.01 0.005 --max-parallel 1 --devices cuda:0 cuda:1
-```
-
-如果需要额外保存曲线图和预测图：
-
-```bash
-python3 train.py --save-plots
-```
-
-如果需要同步到 Weights & Biases：
-
-```bash
-python3 train.py --use-wandb --wandb-project cifar10-lab1
-```
-
-如果本地没有解压好的数据：
-
-```bash
-python3 train.py --download
-```
-
-优化器支持：
-
-- `sgd`
-- `adam`
-- `adamw`
-
-W&B 相关参数：
-
-- `--use-wandb`
-- `--wandb-project`
-- `--wandb-entity`
-- `--wandb-run-name`
-
-## 输出
-
-默认输出到：
-
-```bash
+```text
 outputs/<model_name>/<run_name>/
 ```
 
-包括：
+典型内容包括：
 
-- `model_structure.txt`
-- `train_samples.png`
-- `epoch_metrics.csv`：每个 epoch 的 `train_loss`、`train_acc`、`val_loss`、`val_acc`、单轮耗时、累计训练耗时
-- `summary_metrics.csv`：参数量、FLOPs、总训练时间、推理时间、收敛轮次、准确率等汇总指标
 - `best_model.pth`
-- `metrics.txt`
-- `class_accuracy.txt`
+- `epoch_metrics.csv`
+- `summary_metrics.csv`
 - `class_accuracy.csv`
+- `model_structure.txt`
 
-如果加了 `--save-plots`，还会额外保存：
+学习率扫描还会生成：
 
-- `training_curves.png`
-- `val_predictions.png`
+- `<model>_sgd_lr_sweep_summary.csv`
+- `<model>_sgd_best_lr.txt`
 
-学习率扫描脚本还会额外输出：
+## 报告相关
 
-- `<sweep_name>_lr_sweep_summary.csv`
-- `<sweep_name>_best_lr.txt`
+- LaTeX 正文：`实验模板/main.tex`
+- 编译后的 PDF：`实验模板/main.pdf`
+- 参考文献：`实验模板/reference.bib`
+- 图表资源：`实验模板/fig/generated/`
+- 表格资源：`实验模板/tables/`
 
-重复执行同一条 `sweep_lr.py` 命令时，如果某个学习率对应目录下已经存在 `summary_metrics.csv`，脚本会自动跳过该学习率，只继续未完成的部分。
+## 说明
 
-## 扩展模型
-
-1. 在 `src/models/` 新建模型文件
-2. 在 `src/models/registry.py` 里注册
-
-例如：
-
-```python
-from .my_resnet import MyResNet
-
-if model_name == "my_resnet":
-    return MyResNet(num_classes=num_classes)
-```
+- `data/`、`outputs/`、`实验模板/` 保持在项目根目录，便于统一管理数据、实验结果和报告。
+- `code/` 中的入口脚本已经适配当前结构，运行时会自动读写根目录下的 `data/` 和 `outputs/`。

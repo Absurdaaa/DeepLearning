@@ -5,7 +5,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parent
+CODE_ROOT = Path(__file__).resolve().parent
+PROJECT_ROOT = CODE_ROOT.parent
 
 from src.utils.runtime import setup_matplotlib
 

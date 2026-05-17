@@ -13,8 +13,9 @@ from pathlib import Path
 from typing import Iterable
 
 
-PROJECT_ROOT = Path(__file__).resolve().parent
-TRAIN_SCRIPT = PROJECT_ROOT / "train.py"
+CODE_ROOT = Path(__file__).resolve().parent
+PROJECT_ROOT = CODE_ROOT.parent
+TRAIN_SCRIPT = CODE_ROOT / "train.py"
 
 
 def parse_args() -> argparse.Namespace:
@@ -164,7 +165,7 @@ def run_training_sequential(args: argparse.Namespace) -> list[dict[str, str]]:
             print(f"Skipping completed lr={lr}")
             rows.append(collect_summary_row(summary_csv))
             continue
-        subprocess.run(cmd, check=True, cwd=PROJECT_ROOT)
+        subprocess.run(cmd, check=True, cwd=CODE_ROOT)
         rows.append(collect_summary_row(summary_csv))
     return rows
 
@@ -193,7 +194,7 @@ def run_training_parallel(args: argparse.Namespace) -> list[dict[str, str]]:
                 f"Starting lr={lr} "
                 f"{f'on {assigned_device}' if assigned_device else ''}".strip()
             )
-            process = subprocess.Popen(cmd, cwd=PROJECT_ROOT, env=env)
+            process = subprocess.Popen(cmd, cwd=CODE_ROOT, env=env)
             jobs.append(
                 {
                     "lr": lr,
