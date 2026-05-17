@@ -71,7 +71,7 @@ python3 lab1/sweep_lr.py --model simple_cnn --optimizer sgd --batch-size 512 --e
 ```bash
 python sweep_lr.py --model densenet_bc_100 --optimizer sgd --batch-size 512 --epochs 100 --lrs 0.2 0.1 0.05 0.02 0.01 0.005 --max-parallel 2 --devices cuda:0 cuda:1
 
-python sweep_lr.py --model mobilenet_v1 --optimizer sgd --batch-size 512 --epochs 100 --lrs 0.2 0.1 0.05 0.02 0.01 0.005 --max-parallel 2 --devices cuda:0 cuda:1
+python sweep_lr.py --model res2net29_8c64w --optimizer sgd --batch-size 512 --epochs 100 --lrs 0.2 0.1 0.05 0.02 0.01 0.005 --max-parallel 1 --devices cuda:0 cuda:1
 ```
 
 如果需要额外保存曲线图和预测图：

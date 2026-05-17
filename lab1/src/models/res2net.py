@@ -200,7 +200,7 @@ def res2net29_8c64w(num_classes: int = 10) -> Res2Net:
     return Res2Net(
         layers=[3, 3, 3],
         num_classes=num_classes,
-        base_width=64,
+        base_width=16,
         scale=4,
-        cardinality=8,
+        cardinality=4,
     )
