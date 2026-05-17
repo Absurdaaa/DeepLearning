@@ -1,5 +1,3 @@
-"""CIFAR-style MobileNetV1 implementations."""
-
 from __future__ import annotations
 
 import torch

@@ -1,5 +1,3 @@
-"""CIFAR-style Res2Net implementations based on the ResNeXt-29 baseline."""
-
 from __future__ import annotations
 
 import torch
