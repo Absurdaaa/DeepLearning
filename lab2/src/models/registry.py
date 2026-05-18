@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from .lstm import LSTMClassifier
+from .myGRU import MyGRUClassifier
+from .myLSTM import MyLSTMClassifier
 from .rnn import VanillaRNNClassifier
 
-AVAILABLE_MODELS = ("rnn", "lstm")
+AVAILABLE_MODELS = ("rnn", "lstm", "myGRU", "myLSTM")
 
 
 def build_model(
@@ -25,5 +27,17 @@ def build_model(
             output_size=output_size,
             num_layers=num_layers,
             dropout=dropout,
+        )
+    if model_name == "myGRU":
+        return MyGRUClassifier(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            output_size=output_size,
+        )
+    if model_name == "myLSTM":
+        return MyLSTMClassifier(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            output_size=output_size,
         )
     raise ValueError(f"Unknown model: {model_name}")
