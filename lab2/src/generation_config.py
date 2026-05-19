@@ -26,6 +26,8 @@ class GenerationConfig:
     output_dir: Path
     device: torch.device
     sample_max_length: int
+    sample_categories: str
+    samples_per_category: int
 
 
 def build_parser(project_root: Path) -> argparse.ArgumentParser:
@@ -82,6 +84,18 @@ def build_parser(project_root: Path) -> argparse.ArgumentParser:
         help="Training device.",
     )
     parser.add_argument("--sample-max-length", type=int, default=20, help="Maximum length for generated names.")
+    parser.add_argument(
+        "--sample-categories",
+        type=str,
+        default="Russian,German,Spanish,Chinese",
+        help='Categories to preview/evaluate, comma-separated, or "all".',
+    )
+    parser.add_argument(
+        "--samples-per-category",
+        type=int,
+        default=10,
+        help="How many names to generate for each selected category.",
+    )
     return parser
 
 
@@ -103,4 +117,6 @@ def parse_generation_config(project_root: Path) -> GenerationConfig:
         output_dir=Path(args.output_dir),
         device=torch.device(args.device),
         sample_max_length=args.sample_max_length,
+        sample_categories=args.sample_categories,
+        samples_per_category=args.samples_per_category,
     )

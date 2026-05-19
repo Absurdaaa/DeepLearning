@@ -69,7 +69,7 @@ python3 train.py --model lstm --epochs 30 --batch-size 64 --hidden-size 128 --lr
 条件名字生成：
 
 ```bash
-python3 train_generation.py --model rnn_gen --epochs 20 --batch-size 128 --hidden-size 128 --lr 1e-3 --run-name gen_demo
+python3 train_generation.py --model rnn_gen --epochs 20 --batch-size 128 --hidden-size 128 --lr 1e-3 --samples-per-category 20 --run-name gen_demo
 ```
 
 生成任务学习率扫描：
@@ -136,6 +136,18 @@ python3 sweep_lr.py --model myLSTM --optimizer adam --epochs 30 --batch-size 256
 ```
 
 这样 GPU/CPU 利用率会明显高于原来的单样本训练方式。
+
+另外，生成样本数量现在可控：
+
+```bash
+--samples-per-category 20
+```
+
+默认会对 `Russian,German,Spanish,Chinese` 四个类别各生成 20 个名字，共 80 个样本；如果需要更完整的类别一致性评估，可以加：
+
+```bash
+--sample-categories all
+```
 
 生成类别一致性评估会在 `outputs/generation/fidelity_reports/<report_name>/` 下生成：
 

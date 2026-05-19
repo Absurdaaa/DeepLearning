@@ -14,6 +14,7 @@ for MODEL in rnn_gen lstm_gen gru_gen; do
     --lr 0.001 \
     --dropout 0.0 \
     --clip-grad-norm 0 \
+    --samples-per-category 20 \
     --run-name "${MODEL}_baseline"
 done
 

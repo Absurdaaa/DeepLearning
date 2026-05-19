@@ -22,6 +22,25 @@ from .generation_data import (
 from .utils.io import save_epoch_metrics, save_summary_metrics
 
 
+def resolve_sample_categories(dataset: NameGenerationDataset, config: GenerationConfig) -> list[str]:
+    if config.sample_categories.strip().lower() == "all":
+        return list(dataset.class_names)
+
+    requested = [item.strip() for item in config.sample_categories.split(",") if item.strip()]
+    valid = [item for item in requested if item in dataset.class_names]
+    return valid if valid else [name for name in ("Russian", "German", "Spanish", "Chinese") if name in dataset.class_names]
+
+
+def build_start_letter_pool(dataset: NameGenerationDataset, category_name: str) -> list[str]:
+    # 优先从该语言训练名字中真实出现过的首字母里抽样，避免固定几个字母太单一
+    initials = [name[0] for name in dataset.category_to_names.get(category_name, []) if name]
+    initials = [char for char in initials if char in ALLOWED_CHARACTERS and char.isalpha()]
+    if initials:
+        return initials
+    fallback = category_name[0].upper() if category_name else "A"
+    return [fallback]
+
+
 def build_optimizer(model: nn.Module, config: GenerationConfig) -> torch.optim.Optimizer:
     if config.optimizer == "sgd":
         return torch.optim.SGD(model.parameters(), lr=config.lr, momentum=0.9)
@@ -223,15 +242,17 @@ def run_generation_training(
     }
 
     generated_samples: dict[str, list[str]] = {}
-    for category_name in ("Russian", "German", "Spanish", "Chinese"):
+    for category_name in resolve_sample_categories(dataset, config):
         if category_name not in dataset.class_names:
             continue
         category_index = dataset.class_names.index(category_name)
-        start_letters = category_name[:3].upper()
-        generated_samples[category_name] = [
-            sample_name(model, category_index, len(dataset.class_names), start_letter, config)
-            for start_letter in start_letters
-        ]
+        start_letter_pool = build_start_letter_pool(dataset, category_name)
+        generated_samples[category_name] = []
+        for _ in range(config.samples_per_category):
+            start_letter = rng.choice(start_letter_pool)
+            generated_samples[category_name].append(
+                sample_name(model, category_index, len(dataset.class_names), start_letter, config)
+            )
 
     save_epoch_metrics(history, output_dir / "epoch_metrics.csv")
     save_summary_metrics(summary, output_dir / "summary_metrics.csv")

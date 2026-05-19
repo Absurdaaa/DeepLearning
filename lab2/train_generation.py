@@ -67,6 +67,8 @@ def main() -> None:
             "sample_count": len(dataset),
             "class_count": len(dataset.class_names),
             "class_names": dataset.class_names,
+            "sample_categories": config.sample_categories,
+            "samples_per_category": config.samples_per_category,
         },
         output_dir / "run_metadata.json",
     )

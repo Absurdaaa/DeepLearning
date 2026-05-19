@@ -14,6 +14,7 @@ DROPOUT=0.0
 OPTIMIZER=adam
 CLIP_GRAD_NORM=0
 MAX_SAMPLES=0
+SAMPLES_PER_CATEGORY=20
 
 LRS=(
   0.02 
@@ -43,6 +44,7 @@ for MODEL in rnn_gen lstm_gen gru_gen; do
       --lr "${LR}" \
       --dropout "${DROPOUT}" \
       --clip-grad-norm "${CLIP_GRAD_NORM}" \
+      --samples-per-category "${SAMPLES_PER_CATEGORY}" \
       --max-samples-per-epoch "${MAX_SAMPLES}" \
       --run-name "${RUN_NAME}"
   done
