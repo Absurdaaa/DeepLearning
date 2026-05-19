@@ -13,6 +13,7 @@ from .utils.io import (
     save_class_accuracy,
     save_confusion_csv,
     save_epoch_metrics,
+    save_gradient_metrics,
     save_summary_metrics,
 )
 from .utils.profiling import count_parameters, estimate_flops_per_sample, measure_inference_time
@@ -37,6 +38,20 @@ def move_batch_to_device(batch: dict[str, object], device: torch.device) -> dict
     }
 
 
+def compute_grad_norm(parameters, norm_type: float = 2.0) -> float:
+    total = 0.0
+    has_grad = False
+    for parameter in parameters:
+        if parameter.grad is None:
+            continue
+        grad_norm = parameter.grad.detach().data.norm(norm_type).item()
+        total += grad_norm ** norm_type
+        has_grad = True
+    if not has_grad:
+        return 0.0
+    return total ** (1.0 / norm_type)
+
+
 def run_epoch(
     model: nn.Module,
     loader: Iterable[dict[str, object]],
@@ -45,6 +60,9 @@ def run_epoch(
     optimizer: torch.optim.Optimizer | None = None,
     num_classes: int | None = None,
     clip_grad_norm: float | None = None,
+    epoch_index: int | None = None,
+    gradient_history: list[dict[str, float | int]] | None = None,
+    global_step_start: int = 0,
 ):
     is_training = optimizer is not None
     model.train(is_training)
@@ -54,7 +72,9 @@ def run_epoch(
     total_examples = 0
     confusion = None if num_classes is None else torch.zeros(num_classes, num_classes, dtype=torch.long)
 
-    for batch in loader:
+    global_step = global_step_start
+
+    for batch_index, batch in enumerate(loader, start=1):
         batch = move_batch_to_device(batch, device)
         sequences = batch["sequences"]
         lengths = batch["lengths"]
@@ -69,9 +89,23 @@ def run_epoch(
         if is_training:
             loss.backward()
             # 序列模型有时会梯度爆炸；这里默认裁剪，但也允许命令行关闭做对照实验
+            grad_norm_before_clip = compute_grad_norm(model.parameters())
             if clip_grad_norm is not None and clip_grad_norm > 0:
                 torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=clip_grad_norm)
+            grad_norm_after_clip = compute_grad_norm(model.parameters())
+            if gradient_history is not None and epoch_index is not None:
+                gradient_history.append(
+                    {
+                        "epoch": epoch_index,
+                        "batch_index": batch_index,
+                        "global_step": global_step,
+                        "loss": float(loss.item()),
+                        "grad_norm_before_clip": grad_norm_before_clip,
+                        "grad_norm_after_clip": grad_norm_after_clip,
+                    }
+                )
             optimizer.step()
+            global_step += 1
 
         predictions = logits.argmax(dim=1)
         batch_size = labels.size(0)
@@ -86,12 +120,20 @@ def run_epoch(
 
     avg_loss = total_loss / total_examples
     avg_acc = total_correct / total_examples
-    return avg_loss, avg_acc, confusion
+    return avg_loss, avg_acc, confusion, global_step
 
 
 def evaluate(model, loader, criterion, device, num_classes):
     with torch.no_grad():
-        return run_epoch(model, loader, criterion, device, optimizer=None, num_classes=num_classes)
+        loss, acc, confusion, _ = run_epoch(
+            model,
+            loader,
+            criterion,
+            device,
+            optimizer=None,
+            num_classes=num_classes,
+        )
+        return loss, acc, confusion
 
 
 def build_class_accuracy(confusion: torch.Tensor, class_names: list[str]) -> list[dict[str, float | int | str]]:
@@ -123,6 +165,7 @@ def run_training(
     criterion = nn.NLLLoss()
     optimizer = build_optimizer(model, config)
     history: list[dict[str, float | int]] = []
+    gradient_history: list[dict[str, float | int]] = []
     best_val_acc = -1.0
     best_val_loss = float("inf")
     best_epoch = 0
@@ -131,16 +174,20 @@ def run_training(
     start_time = time.time()
     if config.device.type == "cuda":
         torch.cuda.reset_peak_memory_stats(config.device)
+    global_step = 0
 
     for epoch in range(1, config.epochs + 1):
         epoch_start = time.time()
-        train_loss, train_acc, _ = run_epoch(
+        train_loss, train_acc, _, global_step = run_epoch(
             model,
             train_loader,
             criterion,
             config.device,
             optimizer=optimizer,
             clip_grad_norm=config.clip_grad_norm,
+            epoch_index=epoch,
+            gradient_history=gradient_history,
+            global_step_start=global_step,
         )
         val_loss, val_acc, val_confusion = evaluate(model, val_loader, criterion, config.device, len(class_names))
         epoch_time = time.time() - epoch_start
@@ -218,9 +265,10 @@ def run_training(
     summary.update(inference_metrics)
 
     save_epoch_metrics(history, output_dir / "epoch_metrics.csv")
+    save_gradient_metrics(gradient_history, output_dir / "gradient_metrics.csv")
     save_summary_metrics(summary, output_dir / "summary_metrics.csv")
     # 同时保存图像版和 CSV 版，方便后期统一画图或写报告表格
     save_confusion_csv(best_val_confusion, class_names, output_dir / "val_confusion_matrix.csv")
     save_confusion_csv(test_confusion, class_names, output_dir / "test_confusion_matrix.csv")
     save_class_accuracy(build_class_accuracy(test_confusion, class_names), output_dir / "class_accuracy.csv")
-    return history, best_val_confusion, test_confusion, summary
+    return history, gradient_history, best_val_confusion, test_confusion, summary

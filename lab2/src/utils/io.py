@@ -24,6 +24,15 @@ def save_epoch_metrics(history: list[dict[str, float | int]], path: Path) -> Non
         writer.writerows(history)
 
 
+def save_gradient_metrics(history: list[dict[str, float | int]], path: Path) -> None:
+    if not history:
+        return
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(history[0].keys()))
+        writer.writeheader()
+        writer.writerows(history)
+
+
 def save_summary_metrics(summary: dict[str, float | int], path: Path) -> None:
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.writer(handle)

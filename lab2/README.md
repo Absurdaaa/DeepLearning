@@ -78,8 +78,10 @@ python3 sweep_lr.py --model myLSTM --optimizer adam --epochs 30 --batch-size 256
 - `summary_metrics.csv`
 - `run_metadata.json`
 - `training_curves.png`
+- `gradient_norms.png`
 - `val_confusion_matrix.png`
 - `test_confusion_matrix.png`
+- `gradient_metrics.csv`
 - `val_confusion_matrix.csv`
 - `test_confusion_matrix.csv`
 - `class_accuracy.csv`
@@ -100,6 +102,19 @@ python3 sweep_lr.py --model myLSTM --optimizer adam --epochs 30 --batch-size 256
 - `peak_memory_mb`
 - `avg_test_sequence_length`
 - `flops_per_sample`
+
+如果你想观察“不开梯度裁剪时梯度是否明显变大”，可以直接关闭裁剪：
+
+```bash
+python3 train.py --model rnn --lr 0.001 --clip-grad-norm 0 --run-name rnn_no_clip
+```
+
+之后对比：
+- `gradient_metrics.csv`
+- `gradient_norms.png`
+- `epoch_metrics.csv`
+
+即可判断不开裁剪时梯度是否明显飙升，以及训练是否更容易发散。
 
 ## 说明
 
