@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-cd /Users/linshangjin/Desktop/DeepLearning/lab2
+# cd /Users/linshangjin/Desktop/DeepLearning/lab2
 
 # 这个脚本现在只做学习率扫描。
 # 你把所有模型都扫完之后，把 outputs 结果留给我，我再帮你：
