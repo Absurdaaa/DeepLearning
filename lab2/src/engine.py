@@ -44,6 +44,7 @@ def run_epoch(
     device: torch.device,
     optimizer: torch.optim.Optimizer | None = None,
     num_classes: int | None = None,
+    clip_grad_norm: float | None = None,
 ):
     is_training = optimizer is not None
     model.train(is_training)
@@ -67,8 +68,9 @@ def run_epoch(
 
         if is_training:
             loss.backward()
-            # RNN/LSTM 在序列任务中更容易梯度爆炸，裁剪可以提高训练稳定性
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0)
+            # 序列模型有时会梯度爆炸；这里默认裁剪，但也允许命令行关闭做对照实验
+            if clip_grad_norm is not None and clip_grad_norm > 0:
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=clip_grad_norm)
             optimizer.step()
 
         predictions = logits.argmax(dim=1)
@@ -132,7 +134,14 @@ def run_training(
 
     for epoch in range(1, config.epochs + 1):
         epoch_start = time.time()
-        train_loss, train_acc, _ = run_epoch(model, train_loader, criterion, config.device, optimizer=optimizer)
+        train_loss, train_acc, _ = run_epoch(
+            model,
+            train_loader,
+            criterion,
+            config.device,
+            optimizer=optimizer,
+            clip_grad_norm=config.clip_grad_norm,
+        )
         val_loss, val_acc, val_confusion = evaluate(model, val_loader, criterion, config.device, len(class_names))
         epoch_time = time.time() - epoch_start
         elapsed_train_time = time.time() - start_time

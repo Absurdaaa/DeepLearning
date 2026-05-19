@@ -52,6 +52,7 @@ def main() -> None:
             "batch_size": config.batch_size,
             "optimizer": config.optimizer,
             "lr": config.lr,
+            "clip_grad_norm": config.clip_grad_norm,
             "hidden_size": config.hidden_size,
             "num_layers": config.num_layers,
             "dropout": config.dropout,

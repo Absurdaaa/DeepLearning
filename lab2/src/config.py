@@ -19,6 +19,7 @@ class ExperimentConfig:
     epochs: int
     batch_size: int
     lr: float
+    clip_grad_norm: float
     optimizer: str
     hidden_size: int
     num_layers: int
@@ -40,6 +41,12 @@ def build_parser(project_root: Path) -> argparse.ArgumentParser:
     parser.add_argument("--epochs", type=int, default=30, help="Training epochs.")
     parser.add_argument("--batch-size", type=int, default=64, help="Batch size.")
     parser.add_argument("--lr", type=float, default=1e-2, help="Learning rate.")
+    parser.add_argument(
+        "--clip-grad-norm",
+        type=float,
+        default=5.0,
+        help="Gradient clipping max norm. Set to 0 or a negative value to disable clipping.",
+    )
     parser.add_argument(
         "--optimizer",
         type=str,
@@ -90,6 +97,7 @@ def parse_config(project_root: Path) -> ExperimentConfig:
         epochs=args.epochs,
         batch_size=args.batch_size,
         lr=args.lr,
+        clip_grad_norm=args.clip_grad_norm,
         optimizer=args.optimizer,
         hidden_size=args.hidden_size,
         num_layers=args.num_layers,
