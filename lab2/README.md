@@ -84,6 +84,12 @@ bash sweep_lr_generation.sh
 bash run_generation_fidelity.sh
 ```
 
+如果你已经跑完 `sweep_lr_generation.sh`，不想重新训练，只想用最佳 checkpoint 重新多生成一些名字：
+
+```bash
+bash run_sample_best_generation.sh
+```
+
 快速 smoke test：
 
 ```bash
@@ -158,6 +164,13 @@ python3 sweep_lr.py --model myLSTM --optimizer adam --epochs 30 --batch-size 256
 - `*_fidelity_confusion_matrix.csv`
 - `*_fidelity_confusion_matrix.png`
 - `judge_metadata.json`
+
+从最佳生成模型重新采样会在 `outputs/generation/resampled/<best_run_name>_resampled/` 下生成：
+
+- `generated_samples.txt`
+- `generated_metrics.csv`
+- `source_run.txt`
+- `resample_metadata.json`
 
 学习率扫描还会在 `outputs/<model>/` 下额外生成：
 

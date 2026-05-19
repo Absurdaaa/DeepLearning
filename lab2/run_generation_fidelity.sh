@@ -23,6 +23,11 @@ CLASSIFIER_RUN_DIR="outputs/lstm/${CLASSIFIER_RUN_NAME}"
 if [[ "$#" -gt 0 ]]; then
   GEN_RUNS=("$@")
 else
+  choose_best_resampled_run() {
+    local model_prefix="$1"
+    find outputs/generation/resampled -maxdepth 1 -mindepth 1 -type d -name "${model_prefix}_opt*_resampled" 2>/dev/null | sort | tail -n 1
+  }
+
   choose_best_sweep_run() {
     local model_prefix="$1"
     python3 - "$model_prefix" <<'PY'
@@ -59,11 +64,20 @@ if best_path is not None:
 PY
   }
 
+  RNN_RESAMPLED_RUN="$(choose_best_resampled_run rnn_gen)"
+  LSTM_RESAMPLED_RUN="$(choose_best_resampled_run lstm_gen)"
+  GRU_RESAMPLED_RUN="$(choose_best_resampled_run gru_gen)"
   RNN_SWEEP_RUN="$(choose_best_sweep_run rnn_gen)"
   LSTM_SWEEP_RUN="$(choose_best_sweep_run lstm_gen)"
   GRU_SWEEP_RUN="$(choose_best_sweep_run gru_gen)"
 
-  if [[ -n "${RNN_SWEEP_RUN}" ]] && [[ -n "${LSTM_SWEEP_RUN}" ]] && [[ -n "${GRU_SWEEP_RUN}" ]]; then
+  if [[ -n "${RNN_RESAMPLED_RUN}" ]] && [[ -n "${LSTM_RESAMPLED_RUN}" ]] && [[ -n "${GRU_RESAMPLED_RUN}" ]]; then
+    GEN_RUNS=(
+      "${RNN_RESAMPLED_RUN}"
+      "${LSTM_RESAMPLED_RUN}"
+      "${GRU_RESAMPLED_RUN}"
+    )
+  elif [[ -n "${RNN_SWEEP_RUN}" ]] && [[ -n "${LSTM_SWEEP_RUN}" ]] && [[ -n "${GRU_SWEEP_RUN}" ]]; then
     GEN_RUNS=(
       "${RNN_SWEEP_RUN}"
       "${LSTM_SWEEP_RUN}"
@@ -96,9 +110,10 @@ PY
   else
     echo "No suitable generation runs found."
     echo "Either:"
-    echo "  1. run bash sweep_lr_generation.sh first"
-    echo "  2. or run bash run_generation.sh first"
-    echo "  2. or pass generation run directories explicitly"
+    echo "  1. run bash run_sample_best_generation.sh first"
+    echo "  2. or run bash sweep_lr_generation.sh first"
+    echo "  3. or run bash run_generation.sh first"
+    echo "  4. or pass generation run directories explicitly"
     echo
     echo "Example:"
     echo "  bash run_generation_fidelity.sh outputs/generation/your_rnn_run outputs/generation/your_lstm_run outputs/generation/your_gru_run"
