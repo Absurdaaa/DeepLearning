@@ -32,6 +32,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--hidden-size", type=int, default=128, help="Hidden state size.")
     parser.add_argument("--num-layers", type=int, default=1, help="Number of recurrent layers.")
     parser.add_argument("--dropout", type=float, default=0.0, help="Dropout for stacked LSTM.")
+    parser.add_argument(
+        "--clip-grad-norm",
+        type=float,
+        default=0.0,
+        help="Gradient clipping max norm. Set to 0 or a negative value to disable clipping.",
+    )
     parser.add_argument("--seed", type=int, default=42, help="Random seed.")
     parser.add_argument("--num-workers", type=int, default=0, help="DataLoader workers.")
     parser.add_argument("--train-ratio", type=float, default=0.7, help="Training split ratio.")
@@ -87,6 +93,8 @@ def build_training_command(args: argparse.Namespace, lr: float) -> tuple[list[st
         str(args.num_layers),
         "--dropout",
         str(args.dropout),
+        "--clip-grad-norm",
+        str(args.clip_grad_norm),
         "--seed",
         str(args.seed),
         "--num-workers",

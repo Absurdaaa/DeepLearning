@@ -92,6 +92,7 @@ def main() -> None:
     print(f"- validation confusion: {output_dir / 'val_confusion_matrix.png'}")
     print(f"- test confusion: {output_dir / 'test_confusion_matrix.png'}")
     print(f"- class accuracy: {output_dir / 'class_accuracy.csv'}")
+    print(f"- length-group accuracy: {output_dir / 'length_group_accuracy.csv'}")
     print(f"- best checkpoint: {output_dir / 'best_model.pth'}")
     print(f"- final test acc: {summary['test_acc']:.4f}")
 

@@ -14,6 +14,7 @@ from .utils.io import (
     save_confusion_csv,
     save_epoch_metrics,
     save_gradient_metrics,
+    save_length_group_accuracy,
     save_summary_metrics,
 )
 from .utils.profiling import count_parameters, estimate_flops_per_sample, measure_inference_time
@@ -153,6 +154,58 @@ def build_class_accuracy(confusion: torch.Tensor, class_names: list[str]) -> lis
     return rows
 
 
+def build_length_group_accuracy(length_records: list[dict[str, int]]) -> list[dict[str, float | int | str]]:
+    groups = [
+        ("1-5", 1, 5),
+        ("6-8", 6, 8),
+        ("9-12", 9, 12),
+        ("13+", 13, None),
+    ]
+    rows: list[dict[str, float | int | str]] = []
+    for group_name, lower, upper in groups:
+        filtered = []
+        for record in length_records:
+            length = record["length"]
+            if length < lower:
+                continue
+            if upper is not None and length > upper:
+                continue
+            filtered.append(record)
+
+        total = len(filtered)
+        correct = sum(record["correct"] for record in filtered)
+        accuracy = correct / total if total > 0 else 0.0
+        rows.append(
+            {
+                "length_group": group_name,
+                "correct": correct,
+                "total": total,
+                "accuracy": accuracy,
+            }
+        )
+    return rows
+
+
+def collect_length_group_records(model, loader, device) -> list[dict[str, int]]:
+    records: list[dict[str, int]] = []
+    model.eval()
+    with torch.no_grad():
+        for batch in loader:
+            moved_batch = move_batch_to_device(batch, device)
+            logits = model(moved_batch["sequences"], moved_batch["lengths"])
+            predictions = logits.argmax(dim=1).cpu()
+            labels = moved_batch["labels"].cpu()
+            names = batch["names"]
+            for name, prediction, label in zip(names, predictions, labels):
+                records.append(
+                    {
+                        "length": len(name),
+                        "correct": int(prediction.item() == label.item()),
+                    }
+                )
+    return records
+
+
 def run_training(
     model: nn.Module,
     train_loader,
@@ -271,4 +324,8 @@ def run_training(
     save_confusion_csv(best_val_confusion, class_names, output_dir / "val_confusion_matrix.csv")
     save_confusion_csv(test_confusion, class_names, output_dir / "test_confusion_matrix.csv")
     save_class_accuracy(build_class_accuracy(test_confusion, class_names), output_dir / "class_accuracy.csv")
+    save_length_group_accuracy(
+        build_length_group_accuracy(collect_length_group_records(model, test_loader, config.device)),
+        output_dir / "length_group_accuracy.csv",
+    )
     return history, gradient_history, best_val_confusion, test_confusion, summary

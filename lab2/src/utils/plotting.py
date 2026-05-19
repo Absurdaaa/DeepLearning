@@ -59,6 +59,25 @@ def save_gradient_norms(history: list[dict[str, float | int]], path: Path) -> No
     plt.close(fig)
 
 
+def save_generation_loss_curve(history: list[dict[str, float | int]], path: Path) -> None:
+    if not history:
+        return
+
+    epochs = [int(item["epoch"]) for item in history]
+    train_loss = [float(item["train_loss"]) for item in history]
+
+    fig, ax = plt.subplots(figsize=(8, 4.5))
+    ax.plot(epochs, train_loss, label="Train Loss")
+    ax.set_xlabel("Epoch")
+    ax.set_ylabel("Loss")
+    ax.set_title("Generation Training Loss")
+    ax.grid(alpha=0.3)
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(path, dpi=200, bbox_inches="tight")
+    plt.close(fig)
+
+
 def save_confusion_matrix(confusion: torch.Tensor | None, class_names: list[str], path: Path, title: str) -> None:
     if confusion is None:
         return

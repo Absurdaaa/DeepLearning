@@ -50,6 +50,15 @@ def save_class_accuracy(class_accuracy: list[dict[str, float | int | str]], path
         writer.writerows(class_accuracy)
 
 
+def save_length_group_accuracy(rows: list[dict[str, float | int | str]], path: Path) -> None:
+    if not rows:
+        return
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0].keys()))
+        writer.writeheader()
+        writer.writerows(rows)
+
+
 def save_confusion_csv(confusion, class_names: list[str], path: Path) -> None:
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.writer(handle)

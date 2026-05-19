@@ -44,7 +44,7 @@ def build_parser(project_root: Path) -> argparse.ArgumentParser:
     parser.add_argument(
         "--clip-grad-norm",
         type=float,
-        default=5.0,
+        default=0.0,
         help="Gradient clipping max norm. Set to 0 or a negative value to disable clipping.",
     )
     parser.add_argument(

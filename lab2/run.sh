@@ -15,6 +15,7 @@ set -euo pipefail
 # - batch_size = 128
 # - epochs = 30
 # - hidden_size = 128
+# - clip_grad_norm = 0（关闭手动梯度裁剪）
 #
 # 报告必做：
 # 1. 原始 RNN
@@ -34,7 +35,8 @@ python3 sweep_lr.py \
   --epochs 100 \
   --batch-size 128 \
   --hidden-size 128 \
-  --lrs 0.01 0.005 0.001 0.0005
+  --clip-grad-norm 0 \
+  --lrs 0.02 0.01 0.005 0.001 0.0005
 
 # LSTM
 python3 sweep_lr.py \
@@ -43,7 +45,8 @@ python3 sweep_lr.py \
   --epochs 100 \
   --batch-size 128 \
   --hidden-size 128 \
-  --lrs 0.01 0.005 0.001 0.0005
+  --clip-grad-norm 0 \
+  --lrs 0.02 0.01 0.005 0.001 0.0005
 
 ###############################################################################
 # 二、加分项（可选）
@@ -56,7 +59,8 @@ python3 sweep_lr.py \
   --epochs 100 \
   --batch-size 128 \
   --hidden-size 128 \
-  --lrs 0.01 0.005 0.001 0.0005
+  --clip-grad-norm 0 \
+  --lrs 0.02 0.01 0.005 0.001 0.0005
 
 # 手写 GRU
 python3 sweep_lr.py \
@@ -65,7 +69,8 @@ python3 sweep_lr.py \
   --epochs 100 \
   --batch-size 128 \
   --hidden-size 128 \
-  --lrs 0.01 0.005 0.001 0.0005
+  --clip-grad-norm 0 \
+  --lrs 0.02 0.01 0.005 0.001 0.0005
 
 ###############################################################################
 # 三、运行结束后你主要会用到这些目录

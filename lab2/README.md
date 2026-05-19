@@ -7,20 +7,26 @@
 - `print(net)` 网络结构导出
 - 验证集 `loss/accuracy` 曲线
 - 验证集与测试集 confusion matrix
+- 条件名字生成实验（对应 `char_rnn_gen.py`）
 
 ## 目录结构
 
 ```text
 lab2/
 ├── train.py
+├── train_generation.py
 ├── src/
 │   ├── config.py
 │   ├── constants.py
 │   ├── data.py
 │   ├── engine.py
+│   ├── generation_config.py
+│   ├── generation_data.py
+│   ├── generation_engine.py
 │   ├── models/
 │   │   ├── rnn.py
 │   │   ├── lstm.py
+│   │   ├── name_generator.py
 │   │   └── registry.py
 │   └── utils/
 │       ├── io.py
@@ -60,6 +66,24 @@ LSTM：
 python3 train.py --model lstm --epochs 30 --batch-size 64 --hidden-size 128 --lr 1e-3
 ```
 
+条件名字生成：
+
+```bash
+python3 train_generation.py --epochs 20 --hidden-size 128 --lr 1e-3 --run-name gen_demo
+```
+
+生成任务学习率扫描：
+
+```bash
+bash sweep_lr_generation.sh
+```
+
+快速 smoke test：
+
+```bash
+python3 train_generation.py --epochs 1 --hidden-size 64 --max-samples-per-epoch 256 --run-name gen_smoke
+```
+
 学习率扫描：
 
 ```bash
@@ -85,6 +109,17 @@ python3 sweep_lr.py --model myLSTM --optimizer adam --epochs 30 --batch-size 256
 - `val_confusion_matrix.csv`
 - `test_confusion_matrix.csv`
 - `class_accuracy.csv`
+- `length_group_accuracy.csv`
+- `best_model.pth`
+
+生成任务会在 `outputs/generation/<run_name>/` 下生成：
+
+- `model_structure.txt`
+- `epoch_metrics.csv`
+- `summary_metrics.csv`
+- `run_metadata.json`
+- `training_loss_curve.png`
+- `generated_samples.txt`
 - `best_model.pth`
 
 学习率扫描还会在 `outputs/<model>/` 下额外生成：
@@ -121,4 +156,6 @@ python3 train.py --model rnn --lr 0.001 --clip-grad-norm 0 --run-name rnn_no_cli
 - `rnn` 是作业要求里的原始循环神经网络 baseline。
 - `lstm` 是对应的改进模型，便于后续写“为什么 LSTM 性能优于 RNN”的分析。
 - `myGRU` 和 `myLSTM` 是手动实现的门控循环网络，适合做加分项或结构理解。
+- `train_generation.py` 对应的是名字生成任务：给定语言类别和起始字母，生成符合该语言风格的名字。
 - 当前框架默认做 `train/val/test` 三划分，适合直接写实验报告。
+- 分类任务默认关闭手动梯度裁剪（`clip_grad_norm=0`）；如果需要做梯度裁剪对照实验，再显式传 `--clip-grad-norm 5.0`。
