@@ -14,6 +14,7 @@ class GenerationConfig:
     model: str
     run_name: str | None
     epochs: int
+    batch_size: int
     max_samples_per_epoch: int
     lr: float
     optimizer: str
@@ -38,6 +39,7 @@ def build_parser(project_root: Path) -> argparse.ArgumentParser:
     )
     parser.add_argument("--run-name", type=str, default=None, help="Optional run name.")
     parser.add_argument("--epochs", type=int, default=20, help="Training epochs.")
+    parser.add_argument("--batch-size", type=int, default=128, help="Batch size.")
     parser.add_argument(
         "--max-samples-per-epoch",
         type=int,
@@ -89,6 +91,7 @@ def parse_generation_config(project_root: Path) -> GenerationConfig:
         model=args.model,
         run_name=args.run_name,
         epochs=args.epochs,
+        batch_size=args.batch_size,
         max_samples_per_epoch=args.max_samples_per_epoch,
         lr=args.lr,
         optimizer=args.optimizer,

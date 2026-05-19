@@ -34,8 +34,8 @@ class ConditionalNameGeneratorRNN(nn.Module):
         output = self.log_softmax(output)
         return output, hidden
 
-    def init_state(self, device: torch.device):
-        return torch.zeros(1, self.hidden_size, device=device)
+    def init_state(self, device: torch.device, batch_size: int = 1):
+        return torch.zeros(batch_size, self.hidden_size, device=device)
 
 
 class ConditionalNameGeneratorLSTM(nn.Module):
@@ -63,9 +63,9 @@ class ConditionalNameGeneratorLSTM(nn.Module):
         logits = self.log_softmax(logits)
         return logits, next_state
 
-    def init_state(self, device: torch.device):
-        hidden = torch.zeros(1, 1, self.hidden_size, device=device)
-        cell = torch.zeros(1, 1, self.hidden_size, device=device)
+    def init_state(self, device: torch.device, batch_size: int = 1):
+        hidden = torch.zeros(1, batch_size, self.hidden_size, device=device)
+        cell = torch.zeros(1, batch_size, self.hidden_size, device=device)
         return hidden, cell
 
 
@@ -92,8 +92,8 @@ class ConditionalNameGeneratorGRU(nn.Module):
         logits = self.log_softmax(logits)
         return logits, next_state
 
-    def init_state(self, device: torch.device):
-        return torch.zeros(1, 1, self.hidden_size, device=device)
+    def init_state(self, device: torch.device, batch_size: int = 1):
+        return torch.zeros(1, batch_size, self.hidden_size, device=device)
 
 
 def build_generation_model(

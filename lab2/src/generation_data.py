@@ -8,6 +8,7 @@ import random
 import unicodedata
 
 import torch
+from torch.utils.data import Dataset
 
 from .constants import ALLOWED_CHARACTERS, NUM_CHARACTERS
 
@@ -58,7 +59,7 @@ class NameGenerationSample:
     name: str
 
 
-class NameGenerationDataset:
+class NameGenerationDataset(Dataset[NameGenerationSample]):
     def __init__(self, data_root: Path) -> None:
         if not data_root.exists():
             raise FileNotFoundError(
@@ -95,3 +96,38 @@ class NameGenerationDataset:
 
     def random_sample(self, rng: random.Random) -> NameGenerationSample:
         return self.samples[rng.randrange(len(self.samples))]
+
+    def __getitem__(self, index: int) -> NameGenerationSample:
+        return self.samples[index]
+
+
+def collate_generation_samples(batch: list[NameGenerationSample], num_categories: int) -> dict[str, torch.Tensor | list[str]]:
+    # 这里把一批名字补到同样长度；损失里会忽略 padding 对应的位置
+    batch_size = len(batch)
+    lengths = torch.tensor([len(sample.name) for sample in batch], dtype=torch.long)
+    max_length = int(lengths.max().item())
+
+    categories = torch.zeros(batch_size, num_categories, dtype=torch.float32)
+    inputs = torch.zeros(max_length, batch_size, NUM_CHARACTERS, dtype=torch.float32)
+    targets = torch.full((max_length, batch_size), fill_value=-100, dtype=torch.long)
+    category_names: list[str] = []
+    names: list[str] = []
+
+    for batch_index, sample in enumerate(batch):
+        categories[batch_index, sample.category_index] = 1.0
+        input_seq = input_tensor(sample.name).squeeze(1)
+        target_seq = target_tensor(sample.name)
+        seq_len = input_seq.size(0)
+        inputs[:seq_len, batch_index, :] = input_seq
+        targets[: target_seq.size(0), batch_index] = target_seq
+        category_names.append(sample.category_name)
+        names.append(sample.name)
+
+    return {
+        "categories": categories,
+        "inputs": inputs,
+        "targets": targets,
+        "lengths": lengths,
+        "category_names": category_names,
+        "names": names,
+    }

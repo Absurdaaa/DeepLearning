@@ -9,6 +9,7 @@ cd /Users/linshangjin/Desktop/DeepLearning/lab2
 
 HIDDEN_SIZE=128
 EPOCHS=20
+BATCH_SIZE=128
 DROPOUT=0.0
 OPTIMIZER=adam
 CLIP_GRAD_NORM=0
@@ -36,6 +37,7 @@ for MODEL in rnn_gen lstm_gen gru_gen; do
     python3 train_generation.py \
       --model "${MODEL}" \
       --epochs "${EPOCHS}" \
+      --batch-size "${BATCH_SIZE}" \
       --optimizer "${OPTIMIZER}" \
       --hidden-size "${HIDDEN_SIZE}" \
       --lr "${LR}" \

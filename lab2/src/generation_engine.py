@@ -8,6 +8,7 @@ import csv
 
 import torch
 import torch.nn as nn
+from torch.utils.data import DataLoader, Subset
 
 from .generation_config import GenerationConfig
 from .generation_data import (
@@ -15,8 +16,8 @@ from .generation_data import (
     EOS_INDEX,
     NameGenerationDataset,
     category_tensor,
+    collate_generation_samples,
     input_tensor,
-    target_tensor,
 )
 from .utils.io import save_epoch_metrics, save_summary_metrics
 
@@ -29,33 +30,50 @@ def build_optimizer(model: nn.Module, config: GenerationConfig) -> torch.optim.O
     return torch.optim.Adam(model.parameters(), lr=config.lr)
 
 
-def train_one_sample(
+def _select_active_state(state, next_state, active_mask: torch.Tensor):
+    # 短名字结束后，不再继续更新它的循环状态
+    if isinstance(state, tuple):
+        hidden, cell = state
+        next_hidden, next_cell = next_state
+        active = active_mask.view(1, -1, 1)
+        hidden = torch.where(active, next_hidden, hidden)
+        cell = torch.where(active, next_cell, cell)
+        return hidden, cell
+    active = active_mask.view(-1, 1)
+    return torch.where(active, next_state, state)
+
+
+def train_one_batch(
     model: nn.Module,
-    sample,
-    num_categories: int,
+    batch: dict[str, torch.Tensor | list[str]],
     criterion: nn.Module,
     optimizer: torch.optim.Optimizer,
     config: GenerationConfig,
 ) -> float:
-    category = category_tensor(sample.category_index, num_categories).to(config.device)
-    input_line = input_tensor(sample.name).to(config.device)
-    target_line = target_tensor(sample.name).to(config.device)
-    hidden = model.init_state(config.device)
+    categories = batch["categories"].to(config.device)
+    inputs = batch["inputs"].to(config.device)
+    targets = batch["targets"].to(config.device)
+    lengths = batch["lengths"].to(config.device)
+    batch_size = categories.size(0)
+    hidden = model.init_state(config.device, batch_size=batch_size)
 
     optimizer.zero_grad()
     total_loss = 0.0
 
-    for step_index in range(input_line.size(0)):
-        output, hidden = model(category, input_line[step_index], hidden)
-        step_loss = criterion(output, target_line[step_index].unsqueeze(0))
+    for step_index in range(inputs.size(0)):
+        output, next_hidden = model(categories, inputs[step_index], hidden)
+        step_loss = criterion(output, targets[step_index])
         total_loss = total_loss + step_loss
+        active = step_index < lengths
+        hidden = _select_active_state(hidden, next_hidden, active)
 
     total_loss.backward()
     # 这个任务本质上也是序列模型，必要时也可以开梯度裁剪稳一下
     if config.clip_grad_norm > 0:
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=config.clip_grad_norm)
     optimizer.step()
-    return float(total_loss.item() / input_line.size(0))
+    token_count = int((targets != -100).sum().item())
+    return float(total_loss.item() / max(token_count, 1))
 
 
 def sample_name(
@@ -69,7 +87,7 @@ def sample_name(
     with torch.no_grad():
         category = category_tensor(category_index, num_categories).to(config.device)
         current_input = input_tensor(start_letter).to(config.device)
-        hidden = model.init_state(config.device)
+        hidden = model.init_state(config.device, batch_size=1)
         output_name = start_letter
 
         for _ in range(config.sample_max_length):
@@ -130,7 +148,7 @@ def run_generation_training(
     config: GenerationConfig,
     output_dir,
 ):
-    criterion = nn.NLLLoss()
+    criterion = nn.NLLLoss(ignore_index=-100)
     optimizer = build_optimizer(model, config)
     rng = random.Random(config.seed)
     history: list[dict[str, float | int]] = []
@@ -139,26 +157,36 @@ def run_generation_training(
     best_state = None
     start_time = time.time()
 
-    samples = list(dataset.samples)
+    sample_indices = list(range(len(dataset.samples)))
     for epoch in range(1, config.epochs + 1):
-        rng.shuffle(samples)
-        epoch_samples = samples
+        rng.shuffle(sample_indices)
+        epoch_indices = sample_indices
         if config.max_samples_per_epoch > 0:
-            epoch_samples = samples[: config.max_samples_per_epoch]
+            epoch_indices = sample_indices[: config.max_samples_per_epoch]
+        epoch_dataset = Subset(dataset, epoch_indices)
+        train_loader = DataLoader(
+            epoch_dataset,
+            batch_size=config.batch_size,
+            shuffle=False,
+            num_workers=0,
+            collate_fn=lambda batch: collate_generation_samples(batch, len(dataset.class_names)),
+            pin_memory=config.device.type == "cuda",
+        )
         epoch_start = time.time()
         total_loss = 0.0
+        batch_count = 0
 
-        for sample in epoch_samples:
-            total_loss += train_one_sample(
+        for batch in train_loader:
+            total_loss += train_one_batch(
                 model=model,
-                sample=sample,
-                num_categories=len(dataset.class_names),
+                batch=batch,
                 criterion=criterion,
                 optimizer=optimizer,
                 config=config,
             )
+            batch_count += 1
 
-        avg_loss = total_loss / max(len(epoch_samples), 1)
+        avg_loss = total_loss / max(batch_count, 1)
         epoch_time = time.time() - epoch_start
         elapsed_time = time.time() - start_time
         history.append(
@@ -189,6 +217,7 @@ def run_generation_training(
         "total_train_time_sec": total_time,
         "avg_epoch_time_sec": total_time / max(config.epochs, 1),
         "sample_count": len(dataset.samples),
+        "batch_size": config.batch_size,
         "max_samples_per_epoch": config.max_samples_per_epoch if config.max_samples_per_epoch > 0 else len(dataset.samples),
         "class_count": len(dataset.class_names),
     }

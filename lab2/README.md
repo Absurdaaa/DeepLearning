@@ -69,7 +69,7 @@ python3 train.py --model lstm --epochs 30 --batch-size 64 --hidden-size 128 --lr
 条件名字生成：
 
 ```bash
-python3 train_generation.py --model rnn_gen --epochs 20 --hidden-size 128 --lr 1e-3 --run-name gen_demo
+python3 train_generation.py --model rnn_gen --epochs 20 --batch-size 128 --hidden-size 128 --lr 1e-3 --run-name gen_demo
 ```
 
 生成任务学习率扫描：
@@ -87,7 +87,7 @@ bash run_generation_fidelity.sh
 快速 smoke test：
 
 ```bash
-python3 train_generation.py --model rnn_gen --epochs 1 --hidden-size 64 --max-samples-per-epoch 256 --run-name gen_smoke
+python3 train_generation.py --model rnn_gen --epochs 1 --batch-size 128 --hidden-size 64 --max-samples-per-epoch 256 --run-name gen_smoke
 ```
 
 学习率扫描：
@@ -128,6 +128,14 @@ python3 sweep_lr.py --model myLSTM --optimizer adam --epochs 30 --batch-size 256
 - `generated_samples.txt`
 - `generated_metrics.csv`
 - `best_model.pth`
+
+现在生成任务已经支持 mini-batch 训练，不再是逐样本串行更新。对于 `rnn_gen / lstm_gen / gru_gen`，建议优先使用：
+
+```bash
+--batch-size 128
+```
+
+这样 GPU/CPU 利用率会明显高于原来的单样本训练方式。
 
 生成类别一致性评估会在 `outputs/generation/fidelity_reports/<report_name>/` 下生成：
 

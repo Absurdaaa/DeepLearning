@@ -55,6 +55,7 @@ def main() -> None:
             "model": config.model,
             "run_name": output_dir.name,
             "epochs": config.epochs,
+            "batch_size": config.batch_size,
             "max_samples_per_epoch": config.max_samples_per_epoch,
             "optimizer": config.optimizer,
             "lr": config.lr,
