@@ -38,6 +38,27 @@ def save_curves(history: list[dict[str, float | int]], path: Path) -> None:
     plt.close(fig)
 
 
+def save_gradient_norms(history: list[dict[str, float | int]], path: Path) -> None:
+    if not history:
+        return
+
+    steps = [int(item["global_step"]) for item in history]
+    before_clip = [float(item["grad_norm_before_clip"]) for item in history]
+    after_clip = [float(item["grad_norm_after_clip"]) for item in history]
+
+    fig, ax = plt.subplots(figsize=(10, 4.5))
+    ax.plot(steps, before_clip, label="Before Clip", alpha=0.85, linewidth=1.0)
+    ax.plot(steps, after_clip, label="After Clip", alpha=0.85, linewidth=1.0)
+    ax.set_xlabel("Training Step")
+    ax.set_ylabel("Gradient Norm")
+    ax.set_title("Gradient Norm During Training")
+    ax.grid(alpha=0.3)
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(path, dpi=200, bbox_inches="tight")
+    plt.close(fig)
+
+
 def save_confusion_matrix(confusion: torch.Tensor | None, class_names: list[str], path: Path, title: str) -> None:
     if confusion is None:
         return

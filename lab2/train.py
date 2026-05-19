@@ -20,7 +20,7 @@ def main() -> None:
     config = parse_config(PROJECT_ROOT)
     setup_matplotlib(PROJECT_ROOT)
     set_seed(config.seed)
-    from src.utils.plotting import save_confusion_matrix, save_curves
+    from src.utils.plotting import save_confusion_matrix, save_curves, save_gradient_norms
 
     output_dir = config.output_dir / config.model / build_run_name(config)
     ensure_dir(output_dir)
@@ -66,7 +66,7 @@ def main() -> None:
         },
         output_dir / "run_metadata.json",
     )
-    history, val_confusion, test_confusion, summary = run_training(
+    history, gradient_history, val_confusion, test_confusion, summary = run_training(
         model=model,
         train_loader=train_loader,
         val_loader=val_loader,
@@ -77,15 +77,18 @@ def main() -> None:
     )
 
     save_curves(history, output_dir / "training_curves.png")
+    save_gradient_norms(gradient_history, output_dir / "gradient_norms.png")
     save_confusion_matrix(val_confusion, class_names, output_dir / "val_confusion_matrix.png", "Validation Confusion Matrix")
     save_confusion_matrix(test_confusion, class_names, output_dir / "test_confusion_matrix.png", "Test Confusion Matrix")
 
     print(f"\nSaved outputs to: {output_dir}")
     print(f"- model structure: {output_dir / 'model_structure.txt'}")
     print(f"- epoch logs: {output_dir / 'epoch_metrics.csv'}")
+    print(f"- gradient logs: {output_dir / 'gradient_metrics.csv'}")
     print(f"- summary metrics: {output_dir / 'summary_metrics.csv'}")
     print(f"- run metadata: {output_dir / 'run_metadata.json'}")
     print(f"- training curves: {output_dir / 'training_curves.png'}")
+    print(f"- gradient curves: {output_dir / 'gradient_norms.png'}")
     print(f"- validation confusion: {output_dir / 'val_confusion_matrix.png'}")
     print(f"- test confusion: {output_dir / 'test_confusion_matrix.png'}")
     print(f"- class accuracy: {output_dir / 'class_accuracy.csv'}")
