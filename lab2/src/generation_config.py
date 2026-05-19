@@ -11,6 +11,7 @@ import torch
 
 @dataclass
 class GenerationConfig:
+    model: str
     run_name: str | None
     epochs: int
     max_samples_per_epoch: int
@@ -28,6 +29,13 @@ class GenerationConfig:
 
 def build_parser(project_root: Path) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Conditional name generation framework")
+    parser.add_argument(
+        "--model",
+        type=str,
+        default="rnn_gen",
+        choices=("rnn_gen", "lstm_gen", "gru_gen"),
+        help="Generation model name.",
+    )
     parser.add_argument("--run-name", type=str, default=None, help="Optional run name.")
     parser.add_argument("--epochs", type=int, default=20, help="Training epochs.")
     parser.add_argument(
@@ -78,6 +86,7 @@ def build_parser(project_root: Path) -> argparse.ArgumentParser:
 def parse_generation_config(project_root: Path) -> GenerationConfig:
     args = build_parser(project_root).parse_args()
     return GenerationConfig(
+        model=args.model,
         run_name=args.run_name,
         epochs=args.epochs,
         max_samples_per_epoch=args.max_samples_per_epoch,

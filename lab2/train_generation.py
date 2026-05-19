@@ -10,7 +10,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 from src.generation_config import parse_generation_config
 from src.generation_data import GEN_OUTPUT_SIZE, NameGenerationDataset
 from src.generation_engine import run_generation_training
-from src.models.name_generator import ConditionalNameGenerator
+from src.models.name_generator import build_generation_model
 from src.utils.io import ensure_dir, save_model_summary, save_run_metadata
 from src.utils.runtime import set_seed, setup_matplotlib
 
@@ -19,7 +19,7 @@ def build_run_name(config) -> str:
     if config.run_name:
         return config.run_name
     lr_string = str(config.lr).replace(".", "p")
-    return f"name_gen_h{config.hidden_size}_lr{lr_string}"
+    return f"{config.model}_h{config.hidden_size}_lr{lr_string}"
 
 
 def main() -> None:
@@ -32,7 +32,8 @@ def main() -> None:
     ensure_dir(output_dir)
 
     dataset = NameGenerationDataset(config.data_root)
-    model = ConditionalNameGenerator(
+    model = build_generation_model(
+        model_name=config.model,
         num_categories=len(dataset.class_names),
         input_size=GEN_OUTPUT_SIZE - 1,
         hidden_size=config.hidden_size,
@@ -51,6 +52,7 @@ def main() -> None:
     save_run_metadata(
         {
             "task": "conditional_name_generation",
+            "model": config.model,
             "run_name": output_dir.name,
             "epochs": config.epochs,
             "max_samples_per_epoch": config.max_samples_per_epoch,
@@ -83,6 +85,7 @@ def main() -> None:
     print(f"- run metadata: {output_dir / 'run_metadata.json'}")
     print(f"- training curve: {output_dir / 'training_loss_curve.png'}")
     print(f"- generated samples: {output_dir / 'generated_samples.txt'}")
+    print(f"- generated metrics: {output_dir / 'generated_metrics.csv'}")
     print(f"- best checkpoint: {output_dir / 'best_model.pth'}")
     print(f"- best train loss: {summary['best_train_loss']:.4f}")
     print("\nPreview:")

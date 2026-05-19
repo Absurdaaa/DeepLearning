@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import random
 import time
+import csv
 
 import torch
 import torch.nn as nn
@@ -39,7 +40,7 @@ def train_one_sample(
     category = category_tensor(sample.category_index, num_categories).to(config.device)
     input_line = input_tensor(sample.name).to(config.device)
     target_line = target_tensor(sample.name).to(config.device)
-    hidden = model.init_hidden(config.device)
+    hidden = model.init_state(config.device)
 
     optimizer.zero_grad()
     total_loss = 0.0
@@ -68,7 +69,7 @@ def sample_name(
     with torch.no_grad():
         category = category_tensor(category_index, num_categories).to(config.device)
         current_input = input_tensor(start_letter).to(config.device)
-        hidden = model.init_hidden(config.device)
+        hidden = model.init_state(config.device)
         output_name = start_letter
 
         for _ in range(config.sample_max_length):
@@ -91,6 +92,36 @@ def save_generated_samples(path, generated_samples: dict[str, list[str]]) -> Non
         lines.extend(samples)
         lines.append("")
     path.write_text("\n".join(lines).strip() + "\n", encoding="utf-8")
+
+
+def save_generated_metrics(path, rows: list[dict[str, float | int | str]]) -> None:
+    if not rows:
+        return
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0].keys()))
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def build_generated_metrics(dataset: NameGenerationDataset, generated_samples: dict[str, list[str]]):
+    rows: list[dict[str, float | int | str]] = []
+    for category_name, samples in generated_samples.items():
+        if not samples:
+            continue
+        train_set = set(dataset.category_to_names.get(category_name, []))
+        unique_count = len(set(samples))
+        overlap_count = sum(1 for sample in samples if sample in train_set)
+        avg_length = sum(len(sample) for sample in samples) / len(samples)
+        rows.append(
+            {
+                "category_name": category_name,
+                "generated_count": len(samples),
+                "avg_generated_length": avg_length,
+                "unique_ratio": unique_count / len(samples),
+                "train_overlap_ratio": overlap_count / len(samples),
+            }
+        )
+    return rows
 
 
 def run_generation_training(
@@ -176,4 +207,5 @@ def run_generation_training(
     save_epoch_metrics(history, output_dir / "epoch_metrics.csv")
     save_summary_metrics(summary, output_dir / "summary_metrics.csv")
     save_generated_samples(output_dir / "generated_samples.txt", generated_samples)
+    save_generated_metrics(output_dir / "generated_metrics.csv", build_generated_metrics(dataset, generated_samples))
     return history, summary, generated_samples

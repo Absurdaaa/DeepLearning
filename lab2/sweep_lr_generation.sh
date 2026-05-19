@@ -9,7 +9,7 @@ cd /Users/linshangjin/Desktop/DeepLearning/lab2
 
 HIDDEN_SIZE=128
 EPOCHS=20
-DROPOUT=0.1
+DROPOUT=0.0
 OPTIMIZER=adam
 CLIP_GRAD_NORM=0
 MAX_SAMPLES=0
@@ -22,25 +22,28 @@ LRS=(
   0.0005
 )
 
-for LR in "${LRS[@]}"; do
-  LR_TAG="${LR/./p}"
-  RUN_NAME="generation_opt${OPTIMIZER}_h${HIDDEN_SIZE}_lr${LR_TAG}"
+for MODEL in rnn_gen lstm_gen gru_gen; do
+  for LR in "${LRS[@]}"; do
+    LR_TAG="${LR/./p}"
+    RUN_NAME="${MODEL}_opt${OPTIMIZER}_h${HIDDEN_SIZE}_lr${LR_TAG}"
 
-  if [[ -f "outputs/generation/${RUN_NAME}/summary_metrics.csv" ]]; then
-    echo "Skipping completed run: ${RUN_NAME}"
-    continue
-  fi
+    if [[ -f "outputs/generation/${RUN_NAME}/summary_metrics.csv" ]]; then
+      echo "Skipping completed run: ${RUN_NAME}"
+      continue
+    fi
 
-  echo "== generation sweep: lr=${LR} =="
-  python3 train_generation.py \
-    --epochs "${EPOCHS}" \
-    --optimizer "${OPTIMIZER}" \
-    --hidden-size "${HIDDEN_SIZE}" \
-    --lr "${LR}" \
-    --dropout "${DROPOUT}" \
-    --clip-grad-norm "${CLIP_GRAD_NORM}" \
-    --max-samples-per-epoch "${MAX_SAMPLES}" \
-    --run-name "${RUN_NAME}"
+    echo "== generation sweep: model=${MODEL}, lr=${LR} =="
+    python3 train_generation.py \
+      --model "${MODEL}" \
+      --epochs "${EPOCHS}" \
+      --optimizer "${OPTIMIZER}" \
+      --hidden-size "${HIDDEN_SIZE}" \
+      --lr "${LR}" \
+      --dropout "${DROPOUT}" \
+      --clip-grad-norm "${CLIP_GRAD_NORM}" \
+      --max-samples-per-epoch "${MAX_SAMPLES}" \
+      --run-name "${RUN_NAME}"
+  done
 done
 
 echo
@@ -51,3 +54,4 @@ echo "Suggested comparison metrics:"
 echo "  summary_metrics.csv -> best_train_loss"
 echo "  training_loss_curve.png"
 echo "  generated_samples.txt"
+echo "  generated_metrics.csv"

@@ -69,7 +69,7 @@ python3 train.py --model lstm --epochs 30 --batch-size 64 --hidden-size 128 --lr
 条件名字生成：
 
 ```bash
-python3 train_generation.py --epochs 20 --hidden-size 128 --lr 1e-3 --run-name gen_demo
+python3 train_generation.py --model rnn_gen --epochs 20 --hidden-size 128 --lr 1e-3 --run-name gen_demo
 ```
 
 生成任务学习率扫描：
@@ -78,10 +78,16 @@ python3 train_generation.py --epochs 20 --hidden-size 128 --lr 1e-3 --run-name g
 bash sweep_lr_generation.sh
 ```
 
+生成任务类别一致性评估（用已训练分类器当“评委”）：
+
+```bash
+bash run_generation_fidelity.sh
+```
+
 快速 smoke test：
 
 ```bash
-python3 train_generation.py --epochs 1 --hidden-size 64 --max-samples-per-epoch 256 --run-name gen_smoke
+python3 train_generation.py --model rnn_gen --epochs 1 --hidden-size 64 --max-samples-per-epoch 256 --run-name gen_smoke
 ```
 
 学习率扫描：
@@ -120,7 +126,18 @@ python3 sweep_lr.py --model myLSTM --optimizer adam --epochs 30 --batch-size 256
 - `run_metadata.json`
 - `training_loss_curve.png`
 - `generated_samples.txt`
+- `generated_metrics.csv`
 - `best_model.pth`
+
+生成类别一致性评估会在 `outputs/generation/fidelity_reports/<report_name>/` 下生成：
+
+- `fidelity_per_name.csv`
+- `fidelity_summary.csv`
+- `overall_fidelity.png`
+- `category_fidelity.png`
+- `*_fidelity_confusion_matrix.csv`
+- `*_fidelity_confusion_matrix.png`
+- `judge_metadata.json`
 
 学习率扫描还会在 `outputs/<model>/` 下额外生成：
 
@@ -157,5 +174,8 @@ python3 train.py --model rnn --lr 0.001 --clip-grad-norm 0 --run-name rnn_no_cli
 - `lstm` 是对应的改进模型，便于后续写“为什么 LSTM 性能优于 RNN”的分析。
 - `myGRU` 和 `myLSTM` 是手动实现的门控循环网络，适合做加分项或结构理解。
 - `train_generation.py` 对应的是名字生成任务：给定语言类别和起始字母，生成符合该语言风格的名字。
+- 当前已支持三种生成模型：`rnn_gen`、`lstm_gen`、`gru_gen`。
+- `evaluate_generation_fidelity.py` 会复用你已经训练好的名字分类器，把它当成“评委”来检查生成名字是否符合目标语言风格。
+- `run_generation_fidelity.sh` 默认使用当前最优的 `lstm` 分类器作为评估器，比较 `rnn_gen / lstm_gen / gru_gen` 三种生成模型的类别一致性。
 - 当前框架默认做 `train/val/test` 三划分，适合直接写实验报告。
 - 分类任务默认关闭手动梯度裁剪（`clip_grad_norm=0`）；如果需要做梯度裁剪对照实验，再显式传 `--clip-grad-norm 5.0`。
