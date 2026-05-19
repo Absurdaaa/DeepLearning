@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-cd /Users/linshangjin/Desktop/DeepLearning/lab2
+# cd /Users/linshangjin/Desktop/DeepLearning/lab2
 
 # 默认用当前分类任务里最强的 LSTM 判别器做“评委”
 BEST_INFO_FILE="outputs/lstm/lstm_adam_best_lr.txt"
