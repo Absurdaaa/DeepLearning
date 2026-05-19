@@ -2,13 +2,13 @@
 
 set -euo pipefail
 
-cd /Users/linshangjin/Desktop/DeepLearning/lab2
+# cd /Users/linshangjin/Desktop/DeepLearning/lab2
 
 # 条件名字生成任务的学习率扫描脚本
 # 默认使用全量数据；如果你想先快速粗扫，可以把 MAX_SAMPLES 改成更小的值
 
 HIDDEN_SIZE=128
-EPOCHS=20
+EPOCHS=100
 BATCH_SIZE=128
 DROPOUT=0.0
 OPTIMIZER=adam
