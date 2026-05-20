@@ -27,8 +27,10 @@ class BahdanauAttention(nn.Module):
         projected_query = self.query_layer(query).unsqueeze(1)
         projected_keys = self.key_layer(keys)
         scores = self.score_layer(torch.tanh(projected_query + projected_keys)).squeeze(-1)
+        # 被 padding 补出来的位置直接屏蔽掉，别让注意力分到这些假 token 上。
         scores = scores.masked_fill(~mask, float("-inf"))
         weights = torch.softmax(scores, dim=-1)
+        # 这一步相当于“把整句编码结果按注意力权重做加权平均”。
         context = torch.bmm(weights.unsqueeze(1), keys).squeeze(1)
         return context, weights
 
@@ -56,8 +58,10 @@ class AttnDecoderRNN(nn.Module):
         attention_mask: torch.Tensor,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         embedded = self.dropout(self.embedding(input_tokens)).squeeze(1)
+        # 这里用最后一层 decoder hidden 当 query，去整句 encoder 输出里“找重点”。
         query = hidden[-1]
         context, attention_weights = self.attention(query, encoder_outputs, attention_mask)
+        # 把当前输入词向量和注意力拿到的上下文拼起来，再送进 GRU。
         gru_input = torch.cat([embedded, context], dim=-1).unsqueeze(1)
         output, hidden = self.gru(gru_input, hidden)
         logits = self.out(output)
@@ -91,6 +95,7 @@ class Seq2SeqAttention(nn.Module):
         batch_size, max_source_length, _ = encoder_outputs.shape
 
         hidden = encoder_hidden
+        # attention mask 用来告诉模型：哪些位置是真词，哪些只是补零。
         attention_mask = (
             torch.arange(max_source_length, device=source_tokens.device).unsqueeze(0)
             < source_lengths.unsqueeze(1)
@@ -122,6 +127,7 @@ class Seq2SeqAttention(nn.Module):
             step_prediction = step_logits.argmax(dim=-1)
             predicted_ids.append(step_prediction)
 
+            # 有监督训练时偶尔“扶一把”，不然 decoder 前期很容易越跑越偏。
             use_teacher_forcing = target_tokens is not None and random.random() < teacher_forcing_ratio
             if use_teacher_forcing:
                 decoder_input = target_tokens[:, step + 1].unsqueeze(1)

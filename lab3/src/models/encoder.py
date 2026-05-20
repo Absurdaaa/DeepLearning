@@ -21,6 +21,7 @@ class EncoderRNN(nn.Module):
 
     def forward(self, source_tokens: torch.Tensor, source_lengths: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         embedded = self.dropout(self.embedding(source_tokens))
+        # 这里先把 padding 部分“打包”起来，GRU 就不会把补零也当成真单词去算。
         packed = nn.utils.rnn.pack_padded_sequence(
             embedded,
             lengths=source_lengths.detach().cpu(),
@@ -28,5 +29,6 @@ class EncoderRNN(nn.Module):
             enforce_sorted=True,
         )
         packed_outputs, hidden = self.gru(packed)
+        # 跑完再解包回来，方便后面 attention 直接按时间步取编码结果。
         outputs, _ = nn.utils.rnn.pad_packed_sequence(packed_outputs, batch_first=True)
         return outputs, hidden

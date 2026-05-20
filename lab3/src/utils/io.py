@@ -41,6 +41,15 @@ def save_translation_samples(rows: list[dict[str, object]], path: Path) -> None:
         writer.writerows(rows)
 
 
+def save_rows(rows: list[dict[str, object]], path: Path) -> None:
+    if not rows:
+        return
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0].keys()))
+        writer.writeheader()
+        writer.writerows(rows)
+
+
 def save_attention_rows(rows: list[dict[str, object]], path: Path) -> None:
     if not rows:
         return

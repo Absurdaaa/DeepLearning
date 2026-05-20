@@ -23,6 +23,11 @@ class ExperimentConfig:
     num_layers: int
     dropout: float
     teacher_forcing_ratio: float
+    scheduled_sampling: bool
+    scheduled_sampling_strategy: str
+    scheduled_sampling_min_ratio: float
+    scheduled_sampling_decay_epochs: int
+    scheduled_sampling_inverse_sigmoid_k: float
     seed: int
     num_workers: int
     train_ratio: float
@@ -54,6 +59,37 @@ def build_parser(project_root: Path) -> argparse.ArgumentParser:
     parser.add_argument("--num-layers", type=int, default=1, help="Number of encoder/decoder recurrent layers.")
     parser.add_argument("--dropout", type=float, default=0.1, help="Dropout used in encoder/decoder.")
     parser.add_argument("--teacher-forcing-ratio", type=float, default=0.5, help="Teacher forcing ratio.")
+    parser.add_argument(
+        "--scheduled-sampling",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Enable scheduled sampling as an extension experiment.",
+    )
+    parser.add_argument(
+        "--scheduled-sampling-strategy",
+        type=str,
+        default="inverse_sigmoid",
+        choices=("inverse_sigmoid", "linear"),
+        help="Teacher-forcing decay strategy when scheduled sampling is enabled.",
+    )
+    parser.add_argument(
+        "--scheduled-sampling-min-ratio",
+        type=float,
+        default=0.0,
+        help="Lower bound of teacher forcing ratio under scheduled sampling.",
+    )
+    parser.add_argument(
+        "--scheduled-sampling-decay-epochs",
+        type=int,
+        default=30,
+        help="Epoch span used by linear scheduled sampling decay.",
+    )
+    parser.add_argument(
+        "--scheduled-sampling-inverse-sigmoid-k",
+        type=float,
+        default=10.0,
+        help="k used in inverse-sigmoid schedule from the scheduled sampling paper.",
+    )
     parser.add_argument("--seed", type=int, default=42, help="Random seed.")
     parser.add_argument("--num-workers", type=int, default=0, help="DataLoader workers.")
     parser.add_argument("--train-ratio", type=float, default=0.8, help="Training split ratio.")
@@ -103,6 +139,8 @@ def parse_config(project_root: Path) -> ExperimentConfig:
         raise ValueError("train_ratio + val_ratio must be smaller than 1.")
     if not (0.0 <= args.teacher_forcing_ratio <= 1.0):
         raise ValueError("--teacher-forcing-ratio must be in [0, 1].")
+    if not (0.0 <= args.scheduled_sampling_min_ratio <= 1.0):
+        raise ValueError("--scheduled-sampling-min-ratio must be in [0, 1].")
     if args.max_length < 2:
         raise ValueError("--max-length must be >= 2.")
 
@@ -117,6 +155,11 @@ def parse_config(project_root: Path) -> ExperimentConfig:
         num_layers=args.num_layers,
         dropout=args.dropout,
         teacher_forcing_ratio=args.teacher_forcing_ratio,
+        scheduled_sampling=args.scheduled_sampling,
+        scheduled_sampling_strategy=args.scheduled_sampling_strategy,
+        scheduled_sampling_min_ratio=args.scheduled_sampling_min_ratio,
+        scheduled_sampling_decay_epochs=args.scheduled_sampling_decay_epochs,
+        scheduled_sampling_inverse_sigmoid_k=args.scheduled_sampling_inverse_sigmoid_k,
         seed=args.seed,
         num_workers=args.num_workers,
         train_ratio=args.train_ratio,
