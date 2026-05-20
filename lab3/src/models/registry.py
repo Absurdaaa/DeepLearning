@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from .seq2seq_attn import Seq2SeqAttention
+from .seq2seq_luong import Seq2SeqLuong
 from .seq2seq_rnn import Seq2SeqRNN
 
-AVAILABLE_MODELS = ("seq2seq_rnn", "seq2seq_attn")
+AVAILABLE_MODELS = ("seq2seq_rnn", "seq2seq_attn", "seq2seq_luong")
 
 
 def build_model(
@@ -18,6 +19,7 @@ def build_model(
     pad_idx: int,
     max_decode_length: int,
 ):
+    # 统一从这里按名字建模，train.py 就不用自己写一堆 if/else 了。
     if model_name == "seq2seq_rnn":
         return Seq2SeqRNN(
             src_vocab_size=src_vocab_size,
@@ -30,6 +32,16 @@ def build_model(
         )
     if model_name == "seq2seq_attn":
         return Seq2SeqAttention(
+            src_vocab_size=src_vocab_size,
+            tgt_vocab_size=tgt_vocab_size,
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+            dropout=dropout,
+            pad_idx=pad_idx,
+            max_decode_length=max_decode_length,
+        )
+    if model_name == "seq2seq_luong":
+        return Seq2SeqLuong(
             src_vocab_size=src_vocab_size,
             tgt_vocab_size=tgt_vocab_size,
             hidden_size=hidden_size,

@@ -33,6 +33,22 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--num-layers", type=int, default=1, help="Number of recurrent layers.")
     parser.add_argument("--dropout", type=float, default=0.1, help="Dropout for encoder/decoder.")
     parser.add_argument("--teacher-forcing-ratio", type=float, default=0.5, help="Teacher forcing ratio.")
+    parser.add_argument("--scheduled-sampling", action=argparse.BooleanOptionalAction, default=False, help="Enable scheduled sampling.")
+    parser.add_argument(
+        "--scheduled-sampling-strategy",
+        type=str,
+        default="inverse_sigmoid",
+        choices=("inverse_sigmoid", "linear"),
+        help="Teacher forcing decay strategy for scheduled sampling.",
+    )
+    parser.add_argument("--scheduled-sampling-min-ratio", type=float, default=0.0, help="Lower bound of teacher forcing ratio.")
+    parser.add_argument("--scheduled-sampling-decay-epochs", type=int, default=30, help="Epoch span used by linear decay.")
+    parser.add_argument(
+        "--scheduled-sampling-inverse-sigmoid-k",
+        type=float,
+        default=10.0,
+        help="k used in inverse-sigmoid scheduled sampling.",
+    )
     parser.add_argument("--seed", type=int, default=42, help="Random seed.")
     parser.add_argument("--num-workers", type=int, default=0, help="DataLoader workers.")
     parser.add_argument("--train-ratio", type=float, default=0.8, help="Training split ratio.")
@@ -64,6 +80,7 @@ def build_run_name(args: argparse.Namespace, lr: float) -> str:
     return (
         f"{args.sweep_name}_{args.model}_opt{args.optimizer}_"
         f"h{args.hidden_size}_lr{format_float_tag(lr)}_bs{args.batch_size}"
+        f"{'_ss' if args.scheduled_sampling else ''}"
     )
 
 
@@ -92,6 +109,14 @@ def build_training_command(args: argparse.Namespace, lr: float) -> tuple[list[st
         str(args.dropout),
         "--teacher-forcing-ratio",
         str(args.teacher_forcing_ratio),
+        "--scheduled-sampling-strategy",
+        args.scheduled_sampling_strategy,
+        "--scheduled-sampling-min-ratio",
+        str(args.scheduled_sampling_min_ratio),
+        "--scheduled-sampling-decay-epochs",
+        str(args.scheduled_sampling_decay_epochs),
+        "--scheduled-sampling-inverse-sigmoid-k",
+        str(args.scheduled_sampling_inverse_sigmoid_k),
         "--seed",
         str(args.seed),
         "--num-workers",
@@ -109,6 +134,8 @@ def build_training_command(args: argparse.Namespace, lr: float) -> tuple[list[st
         "--output-dir",
         args.output_dir,
     ]
+    if args.scheduled_sampling:
+        cmd.append("--scheduled-sampling")
     if args.device:
         cmd.extend(["--device", args.device])
     summary_csv = Path(args.output_dir) / args.model / run_name / "summary_metrics.csv"
@@ -140,6 +167,7 @@ def collect_summary_row(summary_csv: Path) -> dict[str, str]:
         "hidden_size": str(metadata["hidden_size"]),
         "num_layers": str(metadata["num_layers"]),
         "teacher_forcing_ratio": str(metadata["teacher_forcing_ratio"]),
+        "scheduled_sampling": str(metadata.get("scheduled_sampling", False)),
         "best_val_acc": summary["best_val_acc"],
         "best_val_loss": summary["best_val_loss"],
         "best_val_exact_match": summary["best_val_exact_match"],
@@ -147,6 +175,7 @@ def collect_summary_row(summary_csv: Path) -> dict[str, str]:
         "test_acc": summary["test_acc"],
         "test_loss": summary["test_loss"],
         "test_exact_match": summary["test_exact_match"],
+        "test_bleu": summary["test_bleu"],
         "total_train_time_sec": summary["total_train_time_sec"],
         "avg_epoch_time_sec": summary["avg_epoch_time_sec"],
         "test_inference_time_sec": summary["test_inference_time_sec"],
@@ -185,6 +214,7 @@ def summarize_runs(args: argparse.Namespace, rows: list[dict[str, str]]) -> None
         "hidden_size",
         "num_layers",
         "teacher_forcing_ratio",
+        "scheduled_sampling",
         "best_val_acc",
         "best_val_loss",
         "best_val_exact_match",
@@ -192,6 +222,7 @@ def summarize_runs(args: argparse.Namespace, rows: list[dict[str, str]]) -> None
         "test_acc",
         "test_loss",
         "test_exact_match",
+        "test_bleu",
         "total_train_time_sec",
         "avg_epoch_time_sec",
         "test_inference_time_sec",
@@ -219,12 +250,14 @@ def summarize_runs(args: argparse.Namespace, rows: list[dict[str, str]]) -> None
                 f"hidden_size={best_row['hidden_size']}",
                 f"num_layers={best_row['num_layers']}",
                 f"teacher_forcing_ratio={best_row['teacher_forcing_ratio']}",
+                f"scheduled_sampling={best_row['scheduled_sampling']}",
                 f"best_val_acc={best_row['best_val_acc']}",
                 f"best_val_exact_match={best_row['best_val_exact_match']}",
                 f"best_val_loss={best_row['best_val_loss']}",
                 f"best_epoch={best_row['best_epoch']}",
                 f"test_acc={best_row['test_acc']}",
                 f"test_exact_match={best_row['test_exact_match']}",
+                f"test_bleu={best_row['test_bleu']}",
                 f"run_name={best_row['run_name']}",
             ]
         )
