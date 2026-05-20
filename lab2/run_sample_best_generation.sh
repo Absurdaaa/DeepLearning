@@ -2,12 +2,12 @@
 
 set -euo pipefail
 
-cd /Users/linshangjin/Desktop/DeepLearning/lab2
+# cd /Users/linshangjin/Desktop/DeepLearning/lab2
 
 python3 sample_best_generation.py \
   --models rnn_gen lstm_gen gru_gen \
   --sample-categories all \
-  --samples-per-category 20 \
+  --samples-per-category 100 \
   --sample-max-length 20
 
 echo
