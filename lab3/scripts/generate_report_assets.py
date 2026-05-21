@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-OUTPUT_ROOT = PROJECT_ROOT / "outputs"
+OUTPUT_ROOT = PROJECT_ROOT / os.environ.get("LAB3_OUTPUT_DIR", "outputs")
 FIG_ROOT = PROJECT_ROOT / "实验模板" / "fig" / "generated"
 TABLE_ROOT = PROJECT_ROOT / "实验模板" / "tables"
 MANIFEST_PATH = PROJECT_ROOT / "实验模板" / "generated_assets_manifest.txt"

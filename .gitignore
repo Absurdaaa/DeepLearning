@@ -4,6 +4,7 @@ lab1/data/
 *.pyc
 
 outputs/
+outputs512/
 .DS_Store
 lab1/实验模板/
 lab1/scripts/
