@@ -77,6 +77,7 @@ def main() -> None:
             "target_vocab_size": dataloaders.output_vocab.size,
             "source_lang": dataloaders.input_vocab.name,
             "target_lang": dataloaders.output_vocab.name,
+            "attention_score_method": getattr(model, "score_method", None),
         },
         output_dir / "run_metadata.json",
     )

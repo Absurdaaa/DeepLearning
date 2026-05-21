@@ -12,11 +12,18 @@ from .encoder import EncoderRNN
 
 
 class LuongAttention(nn.Module):
-    """Luong 的 general attention：先线性变换 query，再和 keys 做点积。"""
+    """Luong attention，支持 dot / general / concat 三种打分方式。"""
 
-    def __init__(self, hidden_size: int) -> None:
+    def __init__(self, hidden_size: int, score_method: str = "general") -> None:
         super().__init__()
-        self.query_layer = nn.Linear(hidden_size, hidden_size, bias=False)
+        if score_method not in {"dot", "general", "concat"}:
+            raise ValueError(f"Unsupported Luong score method: {score_method}")
+        self.score_method = score_method
+        self.query_layer = nn.Linear(hidden_size, hidden_size, bias=False) if score_method == "general" else None
+        self.concat_layer = (
+            nn.Linear(hidden_size * 2, hidden_size, bias=False) if score_method == "concat" else None
+        )
+        self.score_layer = nn.Linear(hidden_size, 1, bias=False) if score_method == "concat" else None
 
     def forward(
         self,
@@ -24,9 +31,19 @@ class LuongAttention(nn.Module):
         keys: torch.Tensor,
         mask: torch.Tensor,
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        projected_query = self.query_layer(query).unsqueeze(2)
-        # 这里就是 Luong 的核心味道：query 和每个 encoder 输出直接做打分。
-        scores = torch.bmm(keys, projected_query).squeeze(2)
+        if self.score_method == "dot":
+            projected_query = query.unsqueeze(2)
+            # 最朴素的 Luong dot：不做额外投影，直接点积。
+            scores = torch.bmm(keys, projected_query).squeeze(2)
+        elif self.score_method == "general":
+            projected_query = self.query_layer(query).unsqueeze(2)
+            # general 会先把 query 线性变换一下，再和 encoder outputs 做匹配。
+            scores = torch.bmm(keys, projected_query).squeeze(2)
+        else:
+            expanded_query = query.unsqueeze(1).expand(-1, keys.size(1), -1)
+            combined = torch.cat([expanded_query, keys], dim=-1)
+            energy = torch.tanh(self.concat_layer(combined))
+            scores = self.score_layer(energy).squeeze(-1)
         scores = scores.masked_fill(~mask, float("-inf"))
         weights = torch.softmax(scores, dim=-1)
         context = torch.bmm(weights.unsqueeze(1), keys).squeeze(1)
@@ -34,7 +51,15 @@ class LuongAttention(nn.Module):
 
 
 class LuongDecoderRNN(nn.Module):
-    def __init__(self, hidden_size: int, output_size: int, num_layers: int, dropout: float, pad_idx: int) -> None:
+    def __init__(
+        self,
+        hidden_size: int,
+        output_size: int,
+        num_layers: int,
+        dropout: float,
+        pad_idx: int,
+        score_method: str,
+    ) -> None:
         super().__init__()
         self.embedding = nn.Embedding(output_size, hidden_size, padding_idx=pad_idx)
         self.dropout = nn.Dropout(dropout)
@@ -45,7 +70,7 @@ class LuongDecoderRNN(nn.Module):
             batch_first=True,
             dropout=dropout if num_layers > 1 else 0.0,
         )
-        self.attention = LuongAttention(hidden_size)
+        self.attention = LuongAttention(hidden_size, score_method=score_method)
         self.concat_layer = nn.Linear(hidden_size * 2, hidden_size)
         self.out = nn.Linear(hidden_size, output_size)
 
@@ -77,11 +102,20 @@ class Seq2SeqLuong(nn.Module):
         dropout: float,
         pad_idx: int,
         max_decode_length: int,
+        score_method: str = "general",
     ) -> None:
         super().__init__()
         self.encoder = EncoderRNN(src_vocab_size, hidden_size, num_layers, dropout, pad_idx)
-        self.decoder = LuongDecoderRNN(hidden_size, tgt_vocab_size, num_layers, dropout, pad_idx)
+        self.decoder = LuongDecoderRNN(
+            hidden_size,
+            tgt_vocab_size,
+            num_layers,
+            dropout,
+            pad_idx,
+            score_method=score_method,
+        )
         self.max_decode_length = max_decode_length
+        self.score_method = score_method
 
     def forward(
         self,
