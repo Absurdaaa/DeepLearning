@@ -5,7 +5,7 @@ set -euo pipefail
 
 # 作用：
 # 1. 给三个主模型扫学习率
-# 2. 统一使用 100 epochs / batch_size=256
+# 2. 统一使用 200 epochs / batch_size=512
 # 3. 跑完后会在 outputs/<model>/ 下生成：
 #    - <model>_adam_lr_sweep_summary.csv
 #    - <model>_adam_best_lr.txt
@@ -26,8 +26,8 @@ set -euo pipefail
 python3 sweep_lr.py \
   --model seq2seq_rnn \
   --optimizer adam \
-  --epochs 100 \
-  --batch-size 256 \
+  --epochs 200 \
+  --batch-size 512 \
   --hidden-size 128 \
   --teacher-forcing-ratio 0.5 \
   --max-samples 12000 \
@@ -36,8 +36,8 @@ python3 sweep_lr.py \
 python3 sweep_lr.py \
   --model seq2seq_attn \
   --optimizer adam \
-  --epochs 100 \
-  --batch-size 256 \
+  --epochs 200 \
+  --batch-size 512 \
   --hidden-size 128 \
   --teacher-forcing-ratio 0.5 \
   --max-samples 12000 \
@@ -46,8 +46,8 @@ python3 sweep_lr.py \
 python3 sweep_lr.py \
   --model seq2seq_luong \
   --optimizer adam \
-  --epochs 100 \
-  --batch-size 256 \
+  --epochs 200 \
+  --batch-size 512 \
   --hidden-size 128 \
   --teacher-forcing-ratio 0.5 \
   --max-samples 12000 \
