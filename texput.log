@@ -1,15 +1,15 @@
-This is XeTeX, Version 3.141592653-2.6-0.999996 (TeX Live 2024) (preloaded format=xelatex 2024.10.2)  20 MAY 2026 19:26
+This is XeTeX, Version 3.141592653-2.6-0.999996 (TeX Live 2024) (preloaded format=xelatex 2024.10.2)  21 MAY 2026 20:32
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
-**main.tex
+**main_lab4.tex
 
 ! Emergency stop.
-<*> main.tex
-             
+<*> main_lab4.tex
+                  
 Here is how much of TeX's memory you used:
  2 strings out of 474235
- 14 string characters out of 5742253
+ 19 string characters out of 5742253
  381171 words of memory out of 5000000
  22796 multiletter control sequences out of 15000+600000
  558069 words of font info for 36 fonts, out of 8000000 for 9000
