@@ -28,9 +28,9 @@ LUONG_LR=$(get_best_lr "outputs/seq2seq_luong/seq2seq_luong_adam_best_lr.txt")
 
 python3 train.py \
   --model seq2seq_rnn \
-  --run-name final_seq2seq_rnn_bs256_e100 \
-  --epochs 100 \
-  --batch-size 256 \
+  --run-name final_seq2seq_rnn_b512_e200 \
+  --epochs 200 \
+  --batch-size 512 \
   --hidden-size 128 \
   --lr "$RNN_LR" \
   --teacher-forcing-ratio 0.5 \
@@ -38,9 +38,9 @@ python3 train.py \
 
 python3 train.py \
   --model seq2seq_attn \
-  --run-name final_seq2seq_attn_bs256_e100 \
-  --epochs 100 \
-  --batch-size 256 \
+  --run-name final_seq2seq_attn_b512_e200  \
+  --epochs 200 \
+  --batch-size 512 \
   --hidden-size 128 \
   --lr "$BAHDANAU_LR" \
   --teacher-forcing-ratio 0.5 \
@@ -48,9 +48,9 @@ python3 train.py \
 
 python3 train.py \
   --model seq2seq_luong \
-  --run-name final_seq2seq_luong_bs256_e100 \
-  --epochs 100 \
-  --batch-size 256 \
+  --run-name final_seq2seq_luong_b512_e200 \
+  --epochs 200 \
+  --batch-size 512 \
   --hidden-size 128 \
   --lr "$LUONG_LR" \
   --teacher-forcing-ratio 0.5 \

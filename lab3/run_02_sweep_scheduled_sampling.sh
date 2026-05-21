@@ -13,10 +13,25 @@ set -euo pipefail
 python3 sweep_lr.py \
   --model seq2seq_attn \
   --optimizer adam \
-  --epochs 100 \
-  --batch-size 256 \
+  --epochs 200 \
+  --batch-size 512 \
   --hidden-size 128 \
-  --teacher-forcing-ratio 0.8 \
+  --teacher-forcing-ratio 1 \
+  --scheduled-sampling \
+  --scheduled-sampling-strategy inverse_sigmoid \
+  --scheduled-sampling-inverse-sigmoid-k 10 \
+  --scheduled-sampling-min-ratio 0.1 \
+  --max-samples 12000 \
+  --lrs 0.003 0.002 0.001 0.0005 0.0003
+  
+  
+python3 sweep_lr.py \
+  --model seq2seq_luong \
+  --optimizer adam \
+  --epochs 200 \
+  --batch-size 512 \
+  --hidden-size 128 \
+  --teacher-forcing-ratio 1 \
   --scheduled-sampling \
   --scheduled-sampling-strategy inverse_sigmoid \
   --scheduled-sampling-inverse-sigmoid-k 10 \
