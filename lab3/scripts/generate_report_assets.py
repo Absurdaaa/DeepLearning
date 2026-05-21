@@ -34,7 +34,10 @@ def collect_best_runs() -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
     for model_dir in sorted(path for path in OUTPUT_ROOT.iterdir() if path.is_dir()):
         best_row: dict[str, object] | None = None
-        for run_dir in sorted(path for path in model_dir.iterdir() if path.is_dir()):
+        run_dirs = sorted(path for path in model_dir.iterdir() if path.is_dir())
+        final_non_ss = [path for path in run_dirs if path.name.startswith("final_") and "_ss_" not in path.name]
+        candidate_run_dirs = final_non_ss if final_non_ss else run_dirs
+        for run_dir in candidate_run_dirs:
             summary_path = run_dir / "summary_metrics.csv"
             metadata_path = run_dir / "run_metadata.json"
             if not summary_path.exists() or not metadata_path.exists():

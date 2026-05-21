@@ -1,0 +1,1 @@
+# 该文件将由 scripts/generate_report_assets.py 在下一步自动覆盖生成。
