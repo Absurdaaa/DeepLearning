@@ -36,5 +36,5 @@ def test_build_dcgan_models_forward_shapes() -> None:
     fake_images = generator(noise)
     scores = discriminator(fake_images)
 
-    assert fake_images.shape == (4, 1, 64, 64)
+    assert fake_images.shape == (4, 1, 28, 28)
     assert scores.shape == (4, 1, 1, 1)

@@ -1,9 +1,9 @@
-"""性能统计占位。"""
+"""性能统计工具。"""
 
 from __future__ import annotations
 
 
-def collect_runtime_profile(*args: object, **kwargs: object) -> dict[str, float]:
-    """下一步统计参数量、时间与显存。"""
-
-    raise NotImplementedError("lab4/src/utils/profiling.py 尚未实现性能统计逻辑。")
+def count_parameters(model) -> tuple[int, int]:
+    total = sum(parameter.numel() for parameter in model.parameters())
+    trainable = sum(parameter.numel() for parameter in model.parameters() if parameter.requires_grad)
+    return total, trainable

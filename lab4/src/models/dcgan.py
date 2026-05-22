@@ -17,11 +17,7 @@ class DCGANGenerator(nn.Module):
     ) -> None:
         super().__init__()
         self.main = nn.Sequential(
-            # torch.nn.ConvTranspose2d(in_channels,out_channels,kernel_size,stride=1,padding=0)
-            nn.ConvTranspose2d(latent_dim, base_channels * 8, 4, 1, 0, bias=False),# 反卷积
-            nn.BatchNorm2d(base_channels * 8),
-            nn.ReLU(True),
-            nn.ConvTranspose2d(base_channels * 8, base_channels * 4, 4, 2, 1, bias=False),
+            nn.ConvTranspose2d(latent_dim, base_channels * 4, 7, 1, 0, bias=False),
             nn.BatchNorm2d(base_channels * 4),
             nn.ReLU(True),
             nn.ConvTranspose2d(base_channels * 4, base_channels * 2, 4, 2, 1, bias=False),
@@ -30,7 +26,7 @@ class DCGANGenerator(nn.Module):
             nn.ConvTranspose2d(base_channels * 2, base_channels, 4, 2, 1, bias=False),
             nn.BatchNorm2d(base_channels),
             nn.ReLU(True),
-            nn.ConvTranspose2d(base_channels, image_channels, 4, 2, 1, bias=False),
+            nn.ConvTranspose2d(base_channels, image_channels, 3, 1, 1, bias=False),
             nn.Tanh(),
         )
 
@@ -49,13 +45,10 @@ class DCGANDiscriminator(nn.Module):
             nn.Conv2d(base_channels, base_channels * 2, 4, 2, 1, bias=False),
             nn.BatchNorm2d(base_channels * 2),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv2d(base_channels * 2, base_channels * 4, 4, 2, 1, bias=False),
+            nn.Conv2d(base_channels * 2, base_channels * 4, 7, 1, 0, bias=False),
             nn.BatchNorm2d(base_channels * 4),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv2d(base_channels * 4, base_channels * 8, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(base_channels * 8),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv2d(base_channels * 8, 1, 4, 1, 0, bias=False),
+            nn.Conv2d(base_channels * 4, 1, 1, 1, 0, bias=False),
             nn.Sigmoid(),
         )
 

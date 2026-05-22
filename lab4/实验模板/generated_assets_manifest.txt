@@ -1,1 +1,6 @@
-# 该文件将由 scripts/generate_report_assets.py 在下一步自动覆盖生成。
+/Users/linshangjin/Desktop/DeepLearning/lab4/实验模板/fig/generated/gan_smoke_gan_fixed_samples.png
+/Users/linshangjin/Desktop/DeepLearning/lab4/实验模板/fig/generated/gan_smoke_gan_latent_variations.png
+/Users/linshangjin/Desktop/DeepLearning/lab4/实验模板/tables/gan_smoke_gan_summary_metrics.csv
+/Users/linshangjin/Desktop/DeepLearning/lab4/实验模板/fig/generated/dcgan_smoke_dcgan_fixed_samples.png
+/Users/linshangjin/Desktop/DeepLearning/lab4/实验模板/fig/generated/dcgan_smoke_dcgan_latent_variations.png
+/Users/linshangjin/Desktop/DeepLearning/lab4/实验模板/tables/dcgan_smoke_dcgan_summary_metrics.csv
