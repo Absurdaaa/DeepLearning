@@ -163,6 +163,19 @@ def run_training(
             }
         )
 
+        epoch_record = history[-1]
+        print(
+            f"[{config.model}][epoch {epoch}/{config.epochs}] "
+            f"train_g={epoch_record['train_generator_loss']:.6f} "
+            f"train_d={epoch_record['train_discriminator_loss']:.6f} "
+            f"val_g={epoch_record['val_generator_loss']:.6f} "
+            f"val_d={epoch_record['val_discriminator_loss']:.6f} "
+            f"D(x)={epoch_record['train_d_real_mean']:.4f} "
+            f"D(G(z))={epoch_record['train_d_fake_mean']:.4f} "
+            f"time={epoch_record['epoch_time_sec']:.2f}s",
+            flush=True,
+        )
+
         if val_metrics["generator_loss"] < best_val_generator_loss:
             best_val_generator_loss = val_metrics["generator_loss"]
             best_epoch = epoch
@@ -177,6 +190,11 @@ def run_training(
             with torch.no_grad():
                 best_images = generator(fixed_noise)
             save_image_grid(best_images, output_dir / "generated_samples.png", nrow=8)
+            print(
+                f"[{config.model}] new best checkpoint at epoch {epoch}: "
+                f"val_g={best_val_generator_loss:.6f}",
+                flush=True,
+            )
 
     checkpoint = torch.load(output_dir / "best_model.pth", map_location=device)
     generator.load_state_dict(checkpoint["generator_state_dict"])

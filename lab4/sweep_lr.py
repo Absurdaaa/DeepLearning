@@ -162,15 +162,28 @@ def main() -> None:
     args = parse_args()
     rows: list[dict[str, str]] = []
 
-    for lr in args.lrs:
+    total = len(args.lrs)
+    for index, lr in enumerate(args.lrs, start=1):
         cmd, summary_csv = build_training_command(args, lr)
+        run_name = build_run_name(args, lr)
+        print(
+            f"== [{index}/{total}] Sweep {args.model} lr={lr} run_name={run_name} ==",
+            flush=True,
+        )
         if not summary_csv.exists():
+            print("Launching training run...", flush=True)
             subprocess.run(cmd, check=True, cwd=PROJECT_ROOT)
+        else:
+            print(f"Skip existing run: {summary_csv.parent}", flush=True)
         rows.append(collect_summary_row(summary_csv))
+        print(
+            f"Completed lr={lr}, best_val_generator_loss={rows[-1]['best_val_generator_loss']}",
+            flush=True,
+        )
 
     summary_path, best_lr_path = summarize_runs(Path(args.output_dir), args.model, args.optimizer, rows)
-    print(f"Saved sweep summary to: {summary_path}")
-    print(f"Saved best lr to: {best_lr_path}")
+    print(f"Saved sweep summary to: {summary_path}", flush=True)
+    print(f"Saved best lr to: {best_lr_path}", flush=True)
 
 
 if __name__ == "__main__":
