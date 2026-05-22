@@ -17,7 +17,8 @@ class DCGANGenerator(nn.Module):
     ) -> None:
         super().__init__()
         self.main = nn.Sequential(
-            nn.ConvTranspose2d(latent_dim, base_channels * 8, 4, 1, 0, bias=False),
+            # torch.nn.ConvTranspose2d(in_channels,out_channels,kernel_size,stride=1,padding=0)
+            nn.ConvTranspose2d(latent_dim, base_channels * 8, 4, 1, 0, bias=False),# 反卷积
             nn.BatchNorm2d(base_channels * 8),
             nn.ReLU(True),
             nn.ConvTranspose2d(base_channels * 8, base_channels * 4, 4, 2, 1, bias=False),
