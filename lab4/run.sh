@@ -27,8 +27,8 @@ echo "== [1/5] Sweep GAN learning rates =="
 python3 sweep_lr.py \
   --model gan \
   --optimizer adam \
-  --epochs 50 \
-  --batch-size 128 \
+  --epochs 100 \
+  --batch-size 512 \
   --latent-dim 100 \
   --lrs 0.001 0.0005 0.0002 0.0001
 
@@ -37,8 +37,8 @@ echo "== [2/5] Sweep DCGAN learning rates =="
 python3 sweep_lr.py \
   --model dcgan \
   --optimizer adam \
-  --epochs 50 \
-  --batch-size 128 \
+  --epochs 100 \
+  --batch-size 512 \
   --latent-dim 100 \
   --lrs 0.001 0.0005 0.0002 0.0001
 
@@ -48,7 +48,7 @@ python3 train.py \
   --model gan \
   --run-name final_gan_fashionmnist \
   --epochs 100 \
-  --batch-size 128 \
+  --batch-size 512 \
   --latent-dim 100 \
   --optimizer adam \
   --lr 0.0002
@@ -59,7 +59,7 @@ python3 train.py \
   --model dcgan \
   --run-name final_dcgan_fashionmnist \
   --epochs 100 \
-  --batch-size 128 \
+  --batch-size 512 \
   --latent-dim 100 \
   --optimizer adam \
   --lr 0.0002

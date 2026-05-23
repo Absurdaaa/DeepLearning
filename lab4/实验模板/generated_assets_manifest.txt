@@ -1,6 +1,6 @@
-/Users/linshangjin/Desktop/DeepLearning/lab4/实验模板/fig/generated/gan_smoke_gan_fixed_samples.png
-/Users/linshangjin/Desktop/DeepLearning/lab4/实验模板/fig/generated/gan_smoke_gan_latent_variations.png
-/Users/linshangjin/Desktop/DeepLearning/lab4/实验模板/tables/gan_smoke_gan_summary_metrics.csv
-/Users/linshangjin/Desktop/DeepLearning/lab4/实验模板/fig/generated/dcgan_smoke_dcgan_fixed_samples.png
-/Users/linshangjin/Desktop/DeepLearning/lab4/实验模板/fig/generated/dcgan_smoke_dcgan_latent_variations.png
-/Users/linshangjin/Desktop/DeepLearning/lab4/实验模板/tables/dcgan_smoke_dcgan_summary_metrics.csv
+/home/ubuntu14/lhp/DeepLearning/lab4/实验模板/fig/generated/gan_final_gan_fashionmnist_fixed_samples.png
+/home/ubuntu14/lhp/DeepLearning/lab4/实验模板/fig/generated/gan_final_gan_fashionmnist_latent_variations.png
+/home/ubuntu14/lhp/DeepLearning/lab4/实验模板/tables/gan_final_gan_fashionmnist_summary_metrics.csv
+/home/ubuntu14/lhp/DeepLearning/lab4/实验模板/fig/generated/dcgan_final_dcgan_fashionmnist_fixed_samples.png
+/home/ubuntu14/lhp/DeepLearning/lab4/实验模板/fig/generated/dcgan_final_dcgan_fashionmnist_latent_variations.png
+/home/ubuntu14/lhp/DeepLearning/lab4/实验模板/tables/dcgan_final_dcgan_fashionmnist_summary_metrics.csv
