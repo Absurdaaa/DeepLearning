@@ -134,6 +134,7 @@ def collect_summary_row(summary_csv: Path) -> dict[str, str]:
         "model": str(metadata["model"]),
         "optimizer": str(metadata["optimizer"]),
         "learning_rate": str(metadata["lr"]),
+        "best_validation_score": summary.get("best_validation_score", summary["best_val_generator_loss"]),
         "best_val_generator_loss": summary["best_val_generator_loss"],
         "best_val_discriminator_loss": summary["best_val_discriminator_loss"],
         "best_epoch": summary["best_epoch"],
@@ -145,7 +146,7 @@ def collect_summary_row(summary_csv: Path) -> dict[str, str]:
 def summarize_runs(output_root: Path, model: str, optimizer: str, rows: list[dict[str, str]]) -> tuple[Path, Path]:
     model_dir = output_root / model
     model_dir.mkdir(parents=True, exist_ok=True)
-    rows = sorted(rows, key=lambda item: float(item["best_val_generator_loss"]))
+    rows = sorted(rows, key=lambda item: float(item.get("best_validation_score", item["best_val_generator_loss"])))
     summary_path = model_dir / f"{model}_{optimizer}_lr_sweep_summary.csv"
     best_lr_path = model_dir / f"{model}_{optimizer}_best_lr.txt"
 
@@ -177,7 +178,7 @@ def main() -> None:
             print(f"Skip existing run: {summary_csv.parent}", flush=True)
         rows.append(collect_summary_row(summary_csv))
         print(
-            f"Completed lr={lr}, best_val_generator_loss={rows[-1]['best_val_generator_loss']}",
+            f"Completed lr={lr}, best_validation_score={rows[-1]['best_validation_score']}",
             flush=True,
         )
 

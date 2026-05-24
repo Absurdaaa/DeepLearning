@@ -9,7 +9,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from src.config import parse_config
 from src.data import build_dataloaders
-from src.engine import run_training
+from src.engine import compute_validation_score, run_training
 from src.models import build_model
 from src.utils.io import ensure_dir
 from src.utils.paths import build_run_name
@@ -117,7 +117,25 @@ def test_run_training_smoke(tmp_path: Path) -> None:
     )
 
     assert "best_val_generator_loss" in summary
+    assert "best_validation_score" in summary
     assert (output_dir / "epoch_metrics.csv").exists()
     assert (output_dir / "summary_metrics.csv").exists()
     assert (output_dir / "best_model.pth").exists()
     assert (output_dir / "generated_samples.png").exists()
+
+
+def test_compute_validation_score_penalizes_inverted_discriminator() -> None:
+    collapsed_score = compute_validation_score(
+        generator_loss=0.00018,
+        discriminator_loss=16.01,
+        d_real_mean=0.02,
+        d_fake_mean=0.9998,
+    )
+    stable_score = compute_validation_score(
+        generator_loss=1.15,
+        discriminator_loss=1.12,
+        d_real_mean=0.58,
+        d_fake_mean=0.37,
+    )
+
+    assert stable_score < collapsed_score

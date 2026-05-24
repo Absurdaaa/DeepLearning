@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import time
 from pathlib import Path
 
@@ -13,6 +14,25 @@ from .data import DataBundle
 from .utils.io import save_epoch_metrics, save_summary_metrics
 from .utils.plotting import save_image_grid, save_training_curves
 from .utils.profiling import count_parameters
+
+
+def compute_validation_score(
+    *,
+    generator_loss: float,
+    discriminator_loss: float,
+    d_real_mean: float,
+    d_fake_mean: float,
+) -> float:
+    """Use a balanced adversarial score to avoid selecting collapsed checkpoints."""
+
+    equilibrium_generator_loss = math.log(2.0)
+    equilibrium_discriminator_loss = 2.0 * math.log(2.0)
+    return (
+        abs(generator_loss - equilibrium_generator_loss)
+        + abs(discriminator_loss - equilibrium_discriminator_loss)
+        + abs(d_real_mean - 0.5)
+        + abs(d_fake_mean - 0.5)
+    )
 
 
 def build_optimizer(parameters, config: TrainConfig) -> torch.optim.Optimizer:
@@ -95,7 +115,9 @@ def run_training(
     fixed_noise = build_noise(config, config.fixed_noise_count, device)
 
     history: list[dict[str, float | int]] = []
+    best_validation_score = float("inf")
     best_val_generator_loss = float("inf")
+    best_val_discriminator_loss = float("inf")
     best_epoch = 0
     start_time = time.perf_counter()
 
@@ -146,6 +168,12 @@ def run_training(
             total_examples += batch_size
 
         val_metrics = evaluate_epoch(generator, discriminator, dataloaders.val_loader, criterion, config, device)
+        validation_score = compute_validation_score(
+            generator_loss=val_metrics["generator_loss"],
+            discriminator_loss=val_metrics["discriminator_loss"],
+            d_real_mean=val_metrics["d_real_mean"],
+            d_fake_mean=val_metrics["d_fake_mean"],
+        )
         epoch_time = time.perf_counter() - epoch_start
         history.append(
             {
@@ -158,6 +186,7 @@ def run_training(
                 "train_d_fake_mean": train_d_fake / max(total_examples, 1),
                 "val_d_real_mean": val_metrics["d_real_mean"],
                 "val_d_fake_mean": val_metrics["d_fake_mean"],
+                "val_selection_score": validation_score,
                 "epoch_time_sec": epoch_time,
                 "elapsed_train_time_sec": time.perf_counter() - start_time,
             }
@@ -176,8 +205,10 @@ def run_training(
             flush=True,
         )
 
-        if val_metrics["generator_loss"] < best_val_generator_loss:
+        if validation_score < best_validation_score:
+            best_validation_score = validation_score
             best_val_generator_loss = val_metrics["generator_loss"]
+            best_val_discriminator_loss = val_metrics["discriminator_loss"]
             best_epoch = epoch
             torch.save(
                 {
@@ -192,7 +223,9 @@ def run_training(
             save_image_grid(best_images, output_dir / "generated_samples.png", nrow=8)
             print(
                 f"[{config.model}] new best checkpoint at epoch {epoch}: "
-                f"val_g={best_val_generator_loss:.6f}",
+                f"score={best_validation_score:.6f} "
+                f"val_g={best_val_generator_loss:.6f} "
+                f"val_d={best_val_discriminator_loss:.6f}",
                 flush=True,
             )
 
@@ -208,8 +241,9 @@ def run_training(
     save_training_curves(history, output_dir / "training_curves.png")
 
     summary = {
+        "best_validation_score": best_validation_score,
         "best_val_generator_loss": best_val_generator_loss,
-        "best_val_discriminator_loss": min(float(item["val_discriminator_loss"]) for item in history),
+        "best_val_discriminator_loss": best_val_discriminator_loss,
         "best_epoch": best_epoch,
         "test_generator_loss": test_metrics["generator_loss"],
         "test_discriminator_loss": test_metrics["discriminator_loss"],
