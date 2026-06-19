@@ -4,9 +4,18 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import math
+
 import matplotlib.pyplot as plt
 import torch
 import torchvision.utils as vutils
+
+
+def _is_nan(value: object) -> bool:
+    try:
+        return math.isnan(float(value))
+    except (TypeError, ValueError):
+        return False
 
 
 def save_training_curves(history: list[dict[str, float | int]], path: Path) -> None:
@@ -23,7 +32,14 @@ def save_training_curves(history: list[dict[str, float | int]], path: Path) -> N
     val_real = [float(item["val_d_real_mean"]) for item in history]
     val_fake = [float(item["val_d_fake_mean"]) for item in history]
 
-    fig, axes = plt.subplots(1, 3, figsize=(16, 4.5))
+    # FID 仅在部分 epoch 计算（其余为 NaN），单独收集有效点。
+    fid_points = [
+        (int(item["epoch"]), float(item["fid"]))
+        for item in history
+        if "fid" in item and item["fid"] is not None and not _is_nan(item["fid"])
+    ]
+    n_axes = 4 if fid_points else 3
+    fig, axes = plt.subplots(1, n_axes, figsize=(5.3 * n_axes, 4.5))
 
     axes[0].plot(epochs, train_g, label="Train G Loss")
     axes[0].plot(epochs, val_g, label="Val G Loss")
@@ -50,6 +66,21 @@ def save_training_curves(history: list[dict[str, float | int]], path: Path) -> N
     axes[2].set_ylabel("Score")
     axes[2].grid(alpha=0.3)
     axes[2].legend()
+
+    if fid_points:
+        fid_epochs = [p[0] for p in fid_points]
+        fid_values = [p[1] for p in fid_points]
+        best_idx = min(range(len(fid_values)), key=lambda i: fid_values[i])
+        axes[3].plot(fid_epochs, fid_values, marker="o", label="FID")
+        axes[3].scatter(
+            [fid_epochs[best_idx]], [fid_values[best_idx]],
+            color="red", zorder=5, label=f"best={fid_values[best_idx]:.2f}",
+        )
+        axes[3].set_title("FID (lower is better)")
+        axes[3].set_xlabel("Epoch")
+        axes[3].set_ylabel("FID")
+        axes[3].grid(alpha=0.3)
+        axes[3].legend()
 
     fig.tight_layout()
     fig.savefig(path, dpi=200, bbox_inches="tight")

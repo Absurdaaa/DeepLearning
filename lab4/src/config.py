@@ -38,6 +38,8 @@ class TrainConfig:
     max_val_samples: int
     max_test_samples: int
     fixed_noise_count: int
+    fid_eval_every: int
+    fid_samples: int
     device: torch.device
 
 
@@ -79,6 +81,8 @@ def build_parser(project_root: Path) -> argparse.ArgumentParser:
     parser.add_argument("--max-val-samples", type=int, default=0, help="Optional cap for val split, 0 means full set.")
     parser.add_argument("--max-test-samples", type=int, default=0, help="Optional cap for test split, 0 means full set.")
     parser.add_argument("--fixed-noise-count", type=int, default=64, help="Number of fixed latent samples for visualization.")
+    parser.add_argument("--fid-eval-every", type=int, default=5, help="Compute FID every N epochs (0 disables FID).")
+    parser.add_argument("--fid-samples", type=int, default=5000, help="Number of real/fake samples used per FID computation.")
     parser.add_argument(
         "--data-root",
         type=str,
@@ -136,5 +140,7 @@ def parse_config(project_root: Path, argv: list[str] | None = None) -> TrainConf
         max_val_samples=args.max_val_samples,
         max_test_samples=args.max_test_samples,
         fixed_noise_count=args.fixed_noise_count,
+        fid_eval_every=args.fid_eval_every,
+        fid_samples=args.fid_samples,
         device=torch.device(args.device),
     )

@@ -40,6 +40,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-val-samples", type=int, default=0, help="Optional cap for val split.")
     parser.add_argument("--max-test-samples", type=int, default=0, help="Optional cap for test split.")
     parser.add_argument("--fixed-noise-count", type=int, default=64, help="Fixed noise count for visualization.")
+    parser.add_argument("--fid-eval-every", type=int, default=5, help="Compute FID every N epochs (0 disables).")
+    parser.add_argument("--fid-samples", type=int, default=5000, help="Samples per FID computation.")
     parser.add_argument("--data-root", type=str, default=str(PROJECT_ROOT / "data"), help="Dataset root.")
     parser.add_argument("--output-dir", type=str, default=str(PROJECT_ROOT / "outputs"), help="Output root.")
     parser.add_argument("--device", type=str, default=None, help="Optional device override.")
@@ -103,6 +105,10 @@ def build_training_command(args: argparse.Namespace, lr: float) -> tuple[list[st
         str(args.max_test_samples),
         "--fixed-noise-count",
         str(args.fixed_noise_count),
+        "--fid-eval-every",
+        str(args.fid_eval_every),
+        "--fid-samples",
+        str(args.fid_samples),
         "--data-root",
         args.data_root,
         "--output-dir",
@@ -134,6 +140,8 @@ def collect_summary_row(summary_csv: Path) -> dict[str, str]:
         "model": str(metadata["model"]),
         "optimizer": str(metadata["optimizer"]),
         "learning_rate": str(metadata["lr"]),
+        "best_fid": summary.get("best_fid", ""),
+        "best_fid_epoch": summary.get("best_fid_epoch", ""),
         "best_validation_score": summary.get("best_validation_score", summary["best_val_generator_loss"]),
         "best_val_generator_loss": summary["best_val_generator_loss"],
         "best_val_discriminator_loss": summary["best_val_discriminator_loss"],
@@ -146,7 +154,19 @@ def collect_summary_row(summary_csv: Path) -> dict[str, str]:
 def summarize_runs(output_root: Path, model: str, optimizer: str, rows: list[dict[str, str]]) -> tuple[Path, Path]:
     model_dir = output_root / model
     model_dir.mkdir(parents=True, exist_ok=True)
-    rows = sorted(rows, key=lambda item: float(item.get("best_validation_score", item["best_val_generator_loss"])))
+
+    def sort_key(item: dict[str, str]) -> float:
+        # 优先按 FID（越低越好）选最优学习率；FID 缺失时退回均衡分。
+        fid = item.get("best_fid", "")
+        try:
+            value = float(fid)
+            if value == value and value != float("inf"):  # 非 NaN/inf
+                return value
+        except (TypeError, ValueError):
+            pass
+        return float(item.get("best_validation_score", item["best_val_generator_loss"]))
+
+    rows = sorted(rows, key=sort_key)
     summary_path = model_dir / f"{model}_{optimizer}_lr_sweep_summary.csv"
     best_lr_path = model_dir / f"{model}_{optimizer}_best_lr.txt"
 

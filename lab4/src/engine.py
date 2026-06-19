@@ -11,6 +11,7 @@ from torch import nn
 
 from .config import TrainConfig
 from .data import DataBundle
+from .utils.fid import FIDEvaluator
 from .utils.io import save_epoch_metrics, save_summary_metrics
 from .utils.plotting import save_image_grid, save_training_curves
 from .utils.profiling import count_parameters
@@ -114,11 +115,25 @@ def run_training(
     criterion = nn.BCELoss()
     fixed_noise = build_noise(config, config.fixed_noise_count, device)
 
+    # FID 评估器：训练前用真实图（训练集）预算一次统计量。FID 越低越好，
+    # 用它选 checkpoint / 选学习率，比 GAN 的 loss 可靠得多。
+    fid_evaluator: FIDEvaluator | None = None
+    if config.fid_eval_every > 0:
+        fid_evaluator = FIDEvaluator(device, num_samples=config.fid_samples)
+        print(f"[{config.model}] computing real-image FID statistics ...", flush=True)
+        fid_evaluator.set_real(dataloaders.train_loader)
+
+    def fid_noise(batch: int) -> torch.Tensor:
+        return build_noise(config, batch, device)
+
     history: list[dict[str, float | int]] = []
     best_validation_score = float("inf")
     best_val_generator_loss = float("inf")
     best_val_discriminator_loss = float("inf")
     best_epoch = 0
+    best_fid = float("inf")
+    best_fid_epoch = 0
+    last_fid = float("nan")
     start_time = time.perf_counter()
 
     for epoch in range(1, config.epochs + 1):
@@ -174,6 +189,15 @@ def run_training(
             d_real_mean=val_metrics["d_real_mean"],
             d_fake_mean=val_metrics["d_fake_mean"],
         )
+
+        # FID 只在评估轮计算（每 fid_eval_every 轮 + 最后一轮）；其余轮记 NaN，
+        # 以保持 epoch_metrics.csv 的列一致。
+        if fid_evaluator is not None and (epoch % config.fid_eval_every == 0 or epoch == config.epochs):
+            fid_value = fid_evaluator.compute(generator, fid_noise)
+            last_fid = fid_value
+        else:
+            fid_value = float("nan")
+
         epoch_time = time.perf_counter() - epoch_start
         history.append(
             {
@@ -187,12 +211,14 @@ def run_training(
                 "val_d_real_mean": val_metrics["d_real_mean"],
                 "val_d_fake_mean": val_metrics["d_fake_mean"],
                 "val_selection_score": validation_score,
+                "fid": fid_value,
                 "epoch_time_sec": epoch_time,
                 "elapsed_train_time_sec": time.perf_counter() - start_time,
             }
         )
 
         epoch_record = history[-1]
+        fid_str = f"{fid_value:.3f}" if not math.isnan(fid_value) else "-"
         print(
             f"[{config.model}][epoch {epoch}/{config.epochs}] "
             f"train_g={epoch_record['train_generator_loss']:.6f} "
@@ -201,35 +227,65 @@ def run_training(
             f"val_d={epoch_record['val_discriminator_loss']:.6f} "
             f"D(x)={epoch_record['train_d_real_mean']:.4f} "
             f"D(G(z))={epoch_record['train_d_fake_mean']:.4f} "
+            f"FID={fid_str} "
             f"time={epoch_record['epoch_time_sec']:.2f}s",
             flush=True,
         )
 
-        # 仅记录“最接近均衡”的 epoch 供报告参考——不要用它来挑选交付模型：
-        # GAN 的 loss 不是样本质量指标，且均衡分数在随机初始化时本就最低，
-        # 用它选 checkpoint 会锁死在没训练过的生成器上。
+        # 记录“最接近均衡”的 epoch 仅供报告参考，不用于挑模型。
         if validation_score < best_validation_score:
             best_validation_score = validation_score
             best_val_generator_loss = val_metrics["generator_loss"]
             best_val_discriminator_loss = val_metrics["discriminator_loss"]
             best_epoch = epoch
 
-    # 交付物（checkpoint / 样例图 / 测试指标）一律取最终 epoch 的生成器，即训练最充分的模型。
-    torch.save(
-        {
-            "epoch": config.epochs,
-            "generator_state_dict": generator.state_dict(),
-            "discriminator_state_dict": discriminator.state_dict(),
-        },
-        output_dir / "best_model.pth",
-    )
-    generator.eval()
-    with torch.no_grad():
-        final_images = generator(fixed_noise)
-    save_image_grid(final_images, output_dir / "generated_samples.png", nrow=8)
+        # 交付 checkpoint 按 FID 最低选取（论文标准做法）。FID 改善时存权重 + 样例图。
+        if fid_evaluator is not None and not math.isnan(fid_value) and fid_value < best_fid:
+            best_fid = fid_value
+            best_fid_epoch = epoch
+            best_val_generator_loss = val_metrics["generator_loss"]
+            best_val_discriminator_loss = val_metrics["discriminator_loss"]
+            torch.save(
+                {
+                    "epoch": epoch,
+                    "generator_state_dict": generator.state_dict(),
+                    "discriminator_state_dict": discriminator.state_dict(),
+                },
+                output_dir / "best_model.pth",
+            )
+            generator.eval()
+            with torch.no_grad():
+                best_images = generator(fixed_noise)
+            save_image_grid(best_images, output_dir / "generated_samples.png", nrow=8)
+            generator.train()
+            print(
+                f"[{config.model}] new best FID={best_fid:.3f} at epoch {epoch}; saved checkpoint.",
+                flush=True,
+            )
+
+    if fid_evaluator is None:
+        # FID 关闭时退回“交付最终 epoch”的逻辑。
+        torch.save(
+            {
+                "epoch": config.epochs,
+                "generator_state_dict": generator.state_dict(),
+                "discriminator_state_dict": discriminator.state_dict(),
+            },
+            output_dir / "best_model.pth",
+        )
+        best_fid_epoch = config.epochs
+        generator.eval()
+        with torch.no_grad():
+            final_images = generator(fixed_noise)
+        save_image_grid(final_images, output_dir / "generated_samples.png", nrow=8)
+
+    # 用 FID 最优的 checkpoint 评估测试集，保证交付指标与交付模型一致。
+    checkpoint = torch.load(output_dir / "best_model.pth", map_location=device)
+    generator.load_state_dict(checkpoint["generator_state_dict"])
+    discriminator.load_state_dict(checkpoint["discriminator_state_dict"])
     print(
-        f"[{config.model}] saved final-epoch model; balanced-best epoch was "
-        f"{best_epoch} (score={best_validation_score:.6f})",
+        f"[{config.model}] best FID={best_fid:.3f} @ epoch {best_fid_epoch}; "
+        f"balanced-best epoch was {best_epoch}.",
         flush=True,
     )
 
@@ -243,6 +299,9 @@ def run_training(
     save_training_curves(history, output_dir / "training_curves.png")
 
     summary = {
+        "best_fid": best_fid,
+        "best_fid_epoch": best_fid_epoch,
+        "final_fid": last_fid,
         "best_validation_score": best_validation_score,
         "best_val_generator_loss": best_val_generator_loss,
         "best_val_discriminator_loss": best_val_discriminator_loss,
