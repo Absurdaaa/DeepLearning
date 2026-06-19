@@ -17,4 +17,4 @@ FASHION_MNIST_CLASS_NAMES = (
     "Ankle boot",
 )
 
-AVAILABLE_MODELS = ("gan", "dcgan")
+AVAILABLE_MODELS = ("gan", "gan_deep", "dcgan")

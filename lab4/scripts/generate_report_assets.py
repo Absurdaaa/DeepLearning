@@ -29,8 +29,9 @@ MANIFEST_PATH = PROJECT_ROOT / "实验模板" / "generated_assets_manifest.txt"
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate report assets for lab4")
-    parser.add_argument("--gan-run", type=str, required=True, help="Run name under outputs/gan/")
-    parser.add_argument("--dcgan-run", type=str, required=True, help="Run name under outputs/dcgan/")
+    parser.add_argument("--gan-run", type=str, default=None, help="Run name under outputs/gan/")
+    parser.add_argument("--gan-deep-run", type=str, default=None, help="Run name under outputs/gan_deep/")
+    parser.add_argument("--dcgan-run", type=str, default=None, help="Run name under outputs/dcgan/")
     parser.add_argument("--output-root", type=str, default=str(PROJECT_ROOT / "outputs"), help="Training output root.")
     parser.add_argument("--fixed-sample-count", type=int, default=8, help="Number of fixed noise samples.")
     parser.add_argument("--latent-analysis-count", type=int, default=100, help="Latent vector dimension / analysis pool size.")
@@ -123,7 +124,16 @@ def main() -> None:
     manifest_lines: list[str] = []
     output_root = Path(args.output_root)
 
-    for model, run_name in (("gan", args.gan_run), ("dcgan", args.dcgan_run)):
+    model_runs = [
+        ("gan", args.gan_run),
+        ("gan_deep", args.gan_deep_run),
+        ("dcgan", args.dcgan_run),
+    ]
+    model_runs = [(model, run) for model, run in model_runs if run]
+    if not model_runs:
+        raise SystemExit("No run specified; pass at least one of --gan-run/--gan-deep-run/--dcgan-run.")
+
+    for model, run_name in model_runs:
         metadata, checkpoint, run_dir = load_run_bundle(output_root, model, run_name)
         generator = build_generator_from_metadata(metadata, checkpoint)
         latent_dim = int(metadata["latent_dim"])

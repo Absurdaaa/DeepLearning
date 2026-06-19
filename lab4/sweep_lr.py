@@ -15,7 +15,7 @@ TRAIN_SCRIPT = PROJECT_ROOT / "train.py"
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Learning-rate sweep helper for lab4")
-    parser.add_argument("--model", required=True, choices=("gan", "dcgan"), help="Model name.")
+    parser.add_argument("--model", required=True, choices=("gan", "gan_deep", "dcgan"), help="Model name.")
     parser.add_argument("--lrs", nargs="+", type=float, required=True, help="Learning rates to sweep.")
     parser.add_argument("--epochs", type=int, default=50, help="Training epochs.")
     parser.add_argument("--batch-size", type=int, default=128, help="Batch size.")

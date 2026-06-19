@@ -205,34 +205,35 @@ def run_training(
             flush=True,
         )
 
+        # 仅记录“最接近均衡”的 epoch 供报告参考——不要用它来挑选交付模型：
+        # GAN 的 loss 不是样本质量指标，且均衡分数在随机初始化时本就最低，
+        # 用它选 checkpoint 会锁死在没训练过的生成器上。
         if validation_score < best_validation_score:
             best_validation_score = validation_score
             best_val_generator_loss = val_metrics["generator_loss"]
             best_val_discriminator_loss = val_metrics["discriminator_loss"]
             best_epoch = epoch
-            torch.save(
-                {
-                    "epoch": epoch,
-                    "generator_state_dict": generator.state_dict(),
-                    "discriminator_state_dict": discriminator.state_dict(),
-                },
-                output_dir / "best_model.pth",
-            )
-            with torch.no_grad():
-                best_images = generator(fixed_noise)
-            save_image_grid(best_images, output_dir / "generated_samples.png", nrow=8)
-            print(
-                f"[{config.model}] new best checkpoint at epoch {epoch}: "
-                f"score={best_validation_score:.6f} "
-                f"val_g={best_val_generator_loss:.6f} "
-                f"val_d={best_val_discriminator_loss:.6f}",
-                flush=True,
-            )
 
-    checkpoint = torch.load(output_dir / "best_model.pth", map_location=device)
-    generator.load_state_dict(checkpoint["generator_state_dict"])
-    discriminator.load_state_dict(checkpoint["discriminator_state_dict"])
+    # 交付物（checkpoint / 样例图 / 测试指标）一律取最终 epoch 的生成器，即训练最充分的模型。
+    torch.save(
+        {
+            "epoch": config.epochs,
+            "generator_state_dict": generator.state_dict(),
+            "discriminator_state_dict": discriminator.state_dict(),
+        },
+        output_dir / "best_model.pth",
+    )
+    with torch.no_grad():
+        final_images = generator(fixed_noise)
+    save_image_grid(final_images, output_dir / "generated_samples.png", nrow=8)
+    print(
+        f"[{config.model}] saved final-epoch model; balanced-best epoch was "
+        f"{best_epoch} (score={best_validation_score:.6f})",
+        flush=True,
+    )
+
     test_metrics = evaluate_epoch(generator, discriminator, dataloaders.test_loader, criterion, config, device)
+    final_record = history[-1]
     total_train_time = time.perf_counter() - start_time
     generator_params, generator_trainable = count_parameters(generator)
     discriminator_params, discriminator_trainable = count_parameters(discriminator)
@@ -245,6 +246,9 @@ def run_training(
         "best_val_generator_loss": best_val_generator_loss,
         "best_val_discriminator_loss": best_val_discriminator_loss,
         "best_epoch": best_epoch,
+        "final_epoch": config.epochs,
+        "final_val_generator_loss": final_record["val_generator_loss"],
+        "final_val_discriminator_loss": final_record["val_discriminator_loss"],
         "test_generator_loss": test_metrics["generator_loss"],
         "test_discriminator_loss": test_metrics["discriminator_loss"],
         "test_d_real_mean": test_metrics["d_real_mean"],
