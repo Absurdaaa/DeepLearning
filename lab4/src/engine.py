@@ -223,6 +223,7 @@ def run_training(
         },
         output_dir / "best_model.pth",
     )
+    generator.eval()
     with torch.no_grad():
         final_images = generator(fixed_noise)
     save_image_grid(final_images, output_dir / "generated_samples.png", nrow=8)
