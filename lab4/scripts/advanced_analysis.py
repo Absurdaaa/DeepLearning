@@ -314,7 +314,13 @@ def main() -> None:
     parser.add_argument("--exp", nargs="+",
                         default=["interp", "diversity", "nn", "dfeat"],
                         help="要运行的实验子集")
+    parser.add_argument("--gan-run", default="final_gan_fashionmnist")
+    parser.add_argument("--gan-deep-run", default="final_gan_deep_fashionmnist")
+    parser.add_argument("--dcgan-run", default="final_dcgan_fashionmnist")
     args = parser.parse_args()
+
+    global MODELS
+    MODELS = [("gan", args.gan_run), ("gan_deep", args.gan_deep_run), ("dcgan", args.dcgan_run)]
     set_seed(42)
     FIG_ROOT.mkdir(parents=True, exist_ok=True)
     TABLE_ROOT.mkdir(parents=True, exist_ok=True)
