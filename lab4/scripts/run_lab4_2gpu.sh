@@ -8,7 +8,9 @@ set -uo pipefail
 cd "$(dirname "$0")/.."   # 切到 lab4 目录
 PY=${PY:-python3}
 LRS="0.001 0.0005 0.0002 0.0001"
-COMMON="--optimizer adam --epochs 100 --batch-size 512 --latent-dim 100 --num-workers 4"
+# sweep 阶段用 2048 个样本算 FID（快, 足够选学习率）；final 用 5000（数值更稳, 见下方覆盖）。
+COMMON="--optimizer adam --epochs 100 --batch-size 512 --latent-dim 100 --num-workers 4 --fid-eval-every 5 --fid-samples 2048"
+FINAL_FID="--fid-samples 5000"
 mkdir -p outputs/logs
 
 echo "[$(date '+%F %T')] START orchestrator (PY=$PY)"
@@ -48,9 +50,9 @@ DC_LR=$(cat outputs/dcgan/dcgan_adam_best_lr.txt)
 echo "[$(date '+%F %T')] best lr -> gan=$GAN_LR gan_deep=$GAND_LR dcgan=$DC_LR"
 
 # ---------- Phase 3: 用最优 lr 正式训练（双卡并行） ----------
-CUDA_VISIBLE_DEVICES=0 $PY train.py --model gan      --run-name final_gan_fashionmnist      $COMMON --lr $GAN_LR  > outputs/logs/final_gan.log 2>&1 &
-CUDA_VISIBLE_DEVICES=0 $PY train.py --model gan_deep --run-name final_gan_deep_fashionmnist $COMMON --lr $GAND_LR > outputs/logs/final_gan_deep.log 2>&1 &
-CUDA_VISIBLE_DEVICES=1 $PY train.py --model dcgan    --run-name final_dcgan_fashionmnist    $COMMON --lr $DC_LR   > outputs/logs/final_dcgan.log 2>&1 &
+CUDA_VISIBLE_DEVICES=0 $PY train.py --model gan      --run-name final_gan_fashionmnist      $COMMON $FINAL_FID --lr $GAN_LR  > outputs/logs/final_gan.log 2>&1 &
+CUDA_VISIBLE_DEVICES=0 $PY train.py --model gan_deep --run-name final_gan_deep_fashionmnist $COMMON $FINAL_FID --lr $GAND_LR > outputs/logs/final_gan_deep.log 2>&1 &
+CUDA_VISIBLE_DEVICES=1 $PY train.py --model dcgan    --run-name final_dcgan_fashionmnist    $COMMON $FINAL_FID --lr $DC_LR   > outputs/logs/final_dcgan.log 2>&1 &
 wait
 echo "[$(date '+%F %T')] Phase3 finals done"
 
