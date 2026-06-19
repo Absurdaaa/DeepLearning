@@ -297,7 +297,7 @@ def exp_discriminator_features() -> None:
         linear_probe(lambda x, m=model, d=discriminator: extract_d_features(m, d, x),
                      feat_dim, f"{model} trained-D")
         # 随机初始化判别器 baseline（同结构未训练）
-        _, rand_d, _ = build_model_for_random(model)
+        _, rand_d = build_model_for_random(model)
         linear_probe(lambda x, m=model, d=rand_d: extract_d_features(m, d, x),
                      feat_dim, f"{model} random-D baseline")
 
