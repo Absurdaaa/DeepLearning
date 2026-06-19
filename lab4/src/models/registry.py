@@ -38,9 +38,14 @@ def build_model(model_name: str, *args: object, **kwargs: object) -> tuple[objec
         hidden_dim = int(kwargs.get("hidden_dim", 128))
         image_size = int(kwargs.get("image_size", 28))
         gen_cls = GANGenerator if model_name == "gan" else DeepGANGenerator
-        disc_cls = GANDiscriminator if model_name == "gan" else DeepGANDiscriminator
         generator: nn.Module = gen_cls(latent_dim=latent_dim, hidden_dim=hidden_dim, image_size=image_size)
-        discriminator: nn.Module = disc_cls(input_dim=image_size * image_size, hidden_dim=hidden_dim)
+        if model_name == "gan":
+            discriminator: nn.Module = GANDiscriminator(input_dim=image_size * image_size, hidden_dim=hidden_dim)
+        else:
+            disc_dropout = float(kwargs.get("disc_dropout", 0.3))
+            discriminator = DeepGANDiscriminator(
+                input_dim=image_size * image_size, hidden_dim=hidden_dim, dropout=disc_dropout
+            )
     else:
         latent_dim = int(kwargs.get("latent_dim", 100))
         image_channels = int(kwargs.get("image_channels", 1))

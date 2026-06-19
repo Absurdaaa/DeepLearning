@@ -40,6 +40,9 @@ class TrainConfig:
     fixed_noise_count: int
     fid_eval_every: int
     fid_samples: int
+    label_smoothing: float
+    d_lr: float
+    disc_dropout: float
     device: torch.device
 
 
@@ -83,6 +86,9 @@ def build_parser(project_root: Path) -> argparse.ArgumentParser:
     parser.add_argument("--fixed-noise-count", type=int, default=64, help="Number of fixed latent samples for visualization.")
     parser.add_argument("--fid-eval-every", type=int, default=5, help="Compute FID every N epochs (0 disables FID).")
     parser.add_argument("--fid-samples", type=int, default=5000, help="Number of real/fake samples used per FID computation.")
+    parser.add_argument("--label-smoothing", type=float, default=0.0, help="单边标签平滑：真实标签 = 1 - 该值（0 表示关闭）。")
+    parser.add_argument("--d-lr", type=float, default=0.0, help="判别器学习率（TTUR）；0 表示与 --lr 相同。")
+    parser.add_argument("--disc-dropout", type=float, default=0.3, help="gan_deep 判别器的 Dropout 概率。")
     parser.add_argument(
         "--data-root",
         type=str,
@@ -142,5 +148,8 @@ def parse_config(project_root: Path, argv: list[str] | None = None) -> TrainConf
         fixed_noise_count=args.fixed_noise_count,
         fid_eval_every=args.fid_eval_every,
         fid_samples=args.fid_samples,
+        label_smoothing=args.label_smoothing,
+        d_lr=args.d_lr,
+        disc_dropout=args.disc_dropout,
         device=torch.device(args.device),
     )

@@ -86,15 +86,15 @@ class DeepGANDiscriminator(nn.Module):
     生成器梯度消失，最后 Sigmoid 输出真假概率（配合 BCELoss）。
     """
 
-    def __init__(self, input_dim: int = 28 * 28, hidden_dim: int = 128) -> None:
+    def __init__(self, input_dim: int = 28 * 28, hidden_dim: int = 128, dropout: float = 0.3) -> None:
         super().__init__()
         self.model = nn.Sequential(
             nn.Linear(input_dim, 512),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Dropout(0.3),
+            nn.Dropout(dropout),
             nn.Linear(512, 256),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Dropout(0.3),
+            nn.Dropout(dropout),
             nn.Linear(256, 1),
             nn.Sigmoid(),
         )

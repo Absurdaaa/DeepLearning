@@ -36,12 +36,13 @@ def compute_validation_score(
     )
 
 
-def build_optimizer(parameters, config: TrainConfig) -> torch.optim.Optimizer:
+def build_optimizer(parameters, config: TrainConfig, lr: float | None = None) -> torch.optim.Optimizer:
+    lr = config.lr if lr is None else lr
     if config.optimizer == "sgd":
-        return torch.optim.SGD(parameters, lr=config.lr, momentum=0.9)
+        return torch.optim.SGD(parameters, lr=lr, momentum=0.9)
     if config.optimizer == "adamw":
-        return torch.optim.AdamW(parameters, lr=config.lr, betas=(config.beta1, 0.999))
-    return torch.optim.Adam(parameters, lr=config.lr, betas=(config.beta1, 0.999))
+        return torch.optim.AdamW(parameters, lr=lr, betas=(config.beta1, 0.999))
+    return torch.optim.Adam(parameters, lr=lr, betas=(config.beta1, 0.999))
 
 
 def build_noise(config: TrainConfig, batch_size: int, device: torch.device) -> torch.Tensor:
@@ -111,7 +112,8 @@ def run_training(
     generator = generator.to(device)
     discriminator = discriminator.to(device)
     generator_optimizer = build_optimizer(generator.parameters(), config)
-    discriminator_optimizer = build_optimizer(discriminator.parameters(), config)
+    d_lr = config.d_lr if config.d_lr > 0 else config.lr
+    discriminator_optimizer = build_optimizer(discriminator.parameters(), config, lr=d_lr)
     criterion = nn.BCELoss()
     fixed_noise = build_noise(config, config.fixed_noise_count, device)
 
@@ -158,7 +160,8 @@ def run_training(
             if real_scores.dim() > 2:
                 real_labels = torch.ones_like(real_scores, device=device)
                 fake_labels = torch.zeros_like(real_scores, device=device)
-            d_real_loss = criterion(real_scores, real_labels)
+            # 单边标签平滑：仅对判别器的“真实”目标使用 1-smoothing，生成器目标仍为 1。
+            d_real_loss = criterion(real_scores, real_labels * (1.0 - config.label_smoothing))
 
             noise = build_noise(config, batch_size, device)
             fake_images = generator(noise)

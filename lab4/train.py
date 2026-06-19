@@ -35,6 +35,7 @@ def main() -> None:
         image_channels=config.image_channels,
         generator_base_channels=config.generator_base_channels,
         discriminator_base_channels=config.discriminator_base_channels,
+        disc_dropout=config.disc_dropout,
     )
 
     print(f"Using device: {config.device}")
@@ -63,6 +64,9 @@ def main() -> None:
             "image_channels": config.image_channels,
             "generator_base_channels": config.generator_base_channels,
             "discriminator_base_channels": config.discriminator_base_channels,
+            "label_smoothing": config.label_smoothing,
+            "d_lr": config.d_lr,
+            "disc_dropout": config.disc_dropout,
             "seed": config.seed,
             "device": str(config.device),
             "train_size": len(dataloaders.train_loader.dataset),
