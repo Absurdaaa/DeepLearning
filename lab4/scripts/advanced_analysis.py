@@ -94,17 +94,28 @@ def save_grid(images: torch.Tensor, path: Path, nrow: int, title: str | None = N
 
 
 # --------------------------- 实验①：潜空间插值 ---------------------------
-def find_endpoint(generator, model: str, clf, targets: set, z_dim: int, gen, max_try: int = 400):
-    """采样噪声直到生成图被分类器判为 targets 中的类别，返回该噪声向量（失败则返回最后一个）。"""
+def find_endpoint(generator, model: str, clf, targets: set, z_dim: int, gen,
+                  max_try: int = 600, conf: float = 0.8):
+    """采样噪声，返回 (z, 预测类别, 置信度)：优先返回 targets 中置信度≥conf 的端点；
+    否则返回 targets 中置信度最高的；若完全没采到 targets 类别（如模式崩溃），返回最后一个样本。"""
+    best_z, best_pred, best_conf = None, -1, -1.0
     last = torch.randn(1, z_dim, generator=gen)
     with torch.no_grad():
         for _ in range(max_try):
             z = torch.randn(1, z_dim, generator=gen)
             img = generator(to_model_noise(model, z.to(DEVICE)))
-            if clf(img).argmax(1).item() in targets:
-                return z.squeeze(0)
+            prob = torch.softmax(clf(img), dim=1)[0]
+            pred = int(prob.argmax().item())
+            if pred in targets:
+                p = float(prob[pred].item())
+                if p >= conf:
+                    return z.squeeze(0), pred, p
+                if p > best_conf:
+                    best_z, best_pred, best_conf = z.squeeze(0), pred, p
             last = z
-    return last.squeeze(0)
+    if best_z is not None:
+        return best_z, best_pred, best_conf
+    return last.squeeze(0), -1, 0.0
 
 
 def exp_interpolation(clf, steps: int = 10) -> None:
@@ -121,14 +132,16 @@ def exp_interpolation(clf, steps: int = 10) -> None:
             log(f"  跳过 {model}（无 checkpoint）")
             continue
         gen = torch.Generator().manual_seed(2024)
-        z0 = find_endpoint(generator, model, clf, shoes, z_dim, gen)
-        z1 = find_endpoint(generator, model, clf, clothes, z_dim, gen)
+        z0, c0, p0 = find_endpoint(generator, model, clf, shoes, z_dim, gen)
+        z1, c1, p1 = find_endpoint(generator, model, clf, clothes, z_dim, gen)
+        n0 = CLASS_NAMES[c0] if c0 >= 0 else "无(崩溃)"
+        n1 = CLASS_NAMES[c1] if c1 >= 0 else "无(崩溃)"
+        log(f"  {model}: 端点 z0={n0}(conf={p0:.2f}) -> z1={n1}(conf={p1:.2f})")
         alphas = torch.linspace(0, 1, steps)
         with torch.no_grad():
             for a in alphas:
                 zi = ((1 - a) * z0 + a * z1).unsqueeze(0).to(DEVICE)
                 rows.append(generator(to_model_noise(model, zi)).cpu())
-        log(f"  {model}: 已生成 鞋->衣物 插值 1 行（{steps} 步）")
     if rows:
         save_grid(torch.cat(rows, 0), FIG_ROOT / "interpolation_grid.png", nrow=steps)
         log("  已保存 interpolation_grid.png（每行一个模型）")
@@ -219,7 +232,6 @@ def exp_diversity(clf: SmallCNN, n_samples: int = 5000) -> None:
             ax.fill(angles_closed, vals, alpha=0.1)
     ax.set_xticks(angles)
     ax.set_xticklabels(CLASS_NAMES, fontsize=8)
-    ax.set_title("Generated-sample class distribution", pad=18)
     ax.legend(loc="upper right", bbox_to_anchor=(1.15, 1.12), fontsize=8)
     fig.tight_layout()
     fig.savefig(FIG_ROOT / "diversity_class_distribution.png", dpi=180, bbox_inches="tight")
