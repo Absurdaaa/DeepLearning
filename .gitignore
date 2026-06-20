@@ -16,3 +16,18 @@ lab2/实验模板/
 lab3/实验模板/
 lab3/.matplotlib/
 教育家精神/
+
+lab4/.matplotlib/
+lab4/preview/
+lab4/preview200/
+# LaTeX 编译中间产物（实验模板）
+lab4/实验模板/*.aux
+lab4/实验模板/*.bbl
+lab4/实验模板/*.blg
+lab4/实验模板/*.fdb_latexmk
+lab4/实验模板/*.fls
+lab4/实验模板/*.log
+lab4/实验模板/*.out
+lab4/实验模板/*.toc
+lab4/实验模板/*.xdv
+lab4/实验模板/main.pdf
