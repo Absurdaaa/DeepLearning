@@ -80,7 +80,26 @@ def save_grid(images: torch.Tensor, path: Path, nrow: int) -> None:
     plt.close(fig)
 
 
+def select_active_dims(generator, model: str, latent_dim: int, pick_count: int,
+                        n_probe: int = 32, delta: float = 2.5) -> list[int]:
+    """选取“最活跃”的隐维度：对每个维度施加固定扰动，测量生成图的平均变化幅度，
+    取变化最大的 pick_count 个维度。避免随机选到对输出几乎无影响的不活跃维度。"""
+    set_seed(0)
+    base = torch.randn(n_probe, latent_dim)
+    with torch.no_grad():
+        base_img = generator(adapt_noise_for_model(model, base))
+        scores = torch.zeros(latent_dim)
+        for d in range(latent_dim):
+            pert = base.clone()
+            pert[:, d] += delta
+            img = generator(adapt_noise_for_model(model, pert))
+            scores[d] = (img - base_img).abs().mean()
+    return sorted(torch.topk(scores, pick_count).indices.tolist())
+
+
 def build_latent_variations(
+    generator,
+    model: str,
     latent_dim: int,
     sample_count: int,
     pick_count: int,
@@ -89,8 +108,8 @@ def build_latent_variations(
 ) -> list[dict[str, object]]:
     set_seed(seed)
     base = torch.randn(sample_count, latent_dim)
-    picks = torch.randperm(latent_dim)[:pick_count].tolist()
-    deltas = torch.linspace(-1.5, 1.5, perturbations)
+    picks = select_active_dims(generator, model, latent_dim, pick_count)
+    deltas = torch.linspace(-2.5, 2.5, perturbations)
 
     rows: list[dict[str, object]] = []
     for dimension in picks:
@@ -146,6 +165,8 @@ def main() -> None:
         manifest_lines.append(str(fixed_path))
 
         latent_rows = build_latent_variations(
+            generator=generator,
+            model=model,
             latent_dim=args.latent_analysis_count,
             sample_count=args.fixed_sample_count,
             pick_count=args.latent_analysis_picks,
