@@ -118,7 +118,7 @@ GAN 的评估比一般分类任务更困难：生成器/判别器的 loss 并不
 DCGAN 使用转置卷积构建生成器、卷积构建判别器\cite{radford2015dcgan}。生成器将 $100$ 维噪声经转置卷积逐级上采样到 $28\times28$（中间使用 \texttt{BatchNorm} 与 \texttt{ReLU}，末端 \texttt{Tanh}）；判别器对称地用步长卷积逐级下采样并以 \texttt{Sigmoid} 输出真假概率。卷积结构引入了图像的空间归纳偏置，因此对衣物纹理与轮廓的建模能力显著强于全连接网络。
 
 \subsection{网络结构打印结果}
-按照要求，模型结构可由 \texttt{print(net)} 直接打印，完整输出保存在各运行目录的 \texttt{model\_structure.txt} 中。下面给出三个模型生成器与判别器的顶层结构骨架。
+按照要求，模型结构可由 \texttt{print(net)} 直接打印。表 \ref{tab:model_prints} 给出三个模型生成器与判别器的顶层结构骨架，完整的 \texttt{print(net)} 输出见附录 \ref{app:prints}。
 
 \begin{table*}[htbp]
 \centering
@@ -357,6 +357,14 @@ gan\_deep & 115.7 & \textbf{93.3} & $\mathbf{-19\%}$ \\
 \section{多样性评估所用的 FashionMNIST 分类器}
 \label{app:clf}
 第 \ref{sec:diversity} 节的多样性评估，以及附录中潜空间插值的端点筛选，都用到了一个分类器作为“裁判”。该分类器是一个简单 CNN：两层卷积（卷积核 $3\times3$，输出通道分别为 32、64，每层后接 ReLU 与 $2\times2$ 最大池化）后接两层全连接（$128$ 维隐层 + $10$ 类输出），在 FashionMNIST 训练集上用 Adam（学习率 $10^{-3}$）训练 3 个 epoch，测试集准确率约 89\%。在多样性实验中，用它对每个生成器的 5000 张生成图进行分类，统计 10 个类别上的分布；在插值实验中，用它筛选出分别生成“鞋”和“衣物”的端点噪声。
+
+\section{网络结构的完整 \texttt{print(net)} 输出}
+\label{app:prints}
+下面给出三个模型生成器与判别器完整的 \texttt{print(net)} 输出，对应正文表 \ref{tab:model_prints} 的结构骨架。
+
+\lstinputlisting[basicstyle=\scriptsize\ttfamily,frame=single,breaklines=true]{model_prints/gan_print.txt}
+\lstinputlisting[basicstyle=\scriptsize\ttfamily,frame=single,breaklines=true]{model_prints/gan_deep_print.txt}
+\lstinputlisting[basicstyle=\scriptsize\ttfamily,frame=single,breaklines=true]{model_prints/dcgan_print.txt}
 
 \section{代码目录说明}
 本实验代码位于 \texttt{lab4/} 目录，核心文件如下：
