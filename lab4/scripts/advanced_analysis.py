@@ -94,26 +94,44 @@ def save_grid(images: torch.Tensor, path: Path, nrow: int, title: str | None = N
 
 
 # --------------------------- 实验①：潜空间插值 ---------------------------
-def exp_interpolation(steps: int = 10, rows: int = 6) -> None:
+def find_endpoint(generator, model: str, clf, targets: set, z_dim: int, gen, max_try: int = 400):
+    """采样噪声直到生成图被分类器判为 targets 中的类别，返回该噪声向量（失败则返回最后一个）。"""
+    last = torch.randn(1, z_dim, generator=gen)
+    with torch.no_grad():
+        for _ in range(max_try):
+            z = torch.randn(1, z_dim, generator=gen)
+            img = generator(to_model_noise(model, z.to(DEVICE)))
+            if clf(img).argmax(1).item() in targets:
+                return z.squeeze(0)
+            last = z
+    return last.squeeze(0)
+
+
+def exp_interpolation(clf, steps: int = 10) -> None:
+    """每个模型取一组端点（鞋 -> 上衣/裤子），线性插值 steps 步；三个模型堆成 3xsteps 组图。"""
     log("\n[①潜空间插值]")
+    shoes = {5, 7, 9}          # Sandal / Sneaker / Ankle boot
+    clothes = {1, 2, 3, 4, 6}  # Trouser / Pullover / Dress / Coat / Shirt
+    clf.eval()
+    rows = []
     for model, run in MODELS:
         try:
             generator, _, z_dim = load_generator_discriminator(model, run)
         except FileNotFoundError:
             log(f"  跳过 {model}（无 checkpoint）")
             continue
-        gen = torch.Generator().manual_seed(42)
-        z0 = torch.randn(rows, z_dim, generator=gen)
-        z1 = torch.randn(rows, z_dim, generator=gen)
+        gen = torch.Generator().manual_seed(2024)
+        z0 = find_endpoint(generator, model, clf, shoes, z_dim, gen)
+        z1 = find_endpoint(generator, model, clf, clothes, z_dim, gen)
         alphas = torch.linspace(0, 1, steps)
-        images = []
         with torch.no_grad():
-            for r in range(rows):
-                for a in alphas:
-                    zi = ((1 - a) * z0[r] + a * z1[r]).unsqueeze(0).to(DEVICE)
-                    images.append(generator(to_model_noise(model, zi)).cpu())
-        save_grid(torch.cat(images, 0), FIG_ROOT / f"{model}_interpolation.png", nrow=steps)
-        log(f"  {model}: 已保存 {steps} 步插值（{rows} 组）")
+            for a in alphas:
+                zi = ((1 - a) * z0 + a * z1).unsqueeze(0).to(DEVICE)
+                rows.append(generator(to_model_noise(model, zi)).cpu())
+        log(f"  {model}: 已生成 鞋->衣物 插值 1 行（{steps} 步）")
+    if rows:
+        save_grid(torch.cat(rows, 0), FIG_ROOT / "interpolation_grid.png", nrow=steps)
+        log("  已保存 interpolation_grid.png（每行一个模型）")
 
 
 # --------------------------- 分类器（用于②多样性） ---------------------------
@@ -190,23 +208,23 @@ def exp_diversity(clf: SmallCNN, n_samples: int = 5000) -> None:
         dist[model] = probs
         log(f"  {model}: 归一化熵={ent:.3f} 覆盖类别数={coverage}/10 "
             f"最多类={CLASS_NAMES[probs.argmax()]}({probs.max():.2f})")
-    # 画类别分布柱状图
-    fig, ax = plt.subplots(figsize=(11, 4))
-    x = np.arange(10)
-    w = 0.25
-    for i, (model, _) in enumerate(MODELS):
+    # 画类别分布雷达图：10 个类别为轴，每个模型一条闭合曲线
+    angles = np.linspace(0, 2 * np.pi, 10, endpoint=False)
+    angles_closed = np.concatenate([angles, angles[:1]])
+    fig, ax = plt.subplots(figsize=(5.5, 5.5), subplot_kw={"polar": True})
+    for model, _ in MODELS:
         if model in dist:
-            ax.bar(x + (i - 1) * w, dist[model], w, label=model)
-    ax.set_xticks(x)
-    ax.set_xticklabels(CLASS_NAMES, rotation=30, ha="right")
-    ax.set_ylabel("Generated class proportion")
-    ax.set_title("Generated-sample class distribution (diversity / mode collapse)")
-    ax.legend()
-    ax.grid(alpha=0.3, axis="y")
+            vals = np.concatenate([dist[model], dist[model][:1]])
+            ax.plot(angles_closed, vals, marker="o", markersize=3, label=model)
+            ax.fill(angles_closed, vals, alpha=0.1)
+    ax.set_xticks(angles)
+    ax.set_xticklabels(CLASS_NAMES, fontsize=8)
+    ax.set_title("Generated-sample class distribution", pad=18)
+    ax.legend(loc="upper right", bbox_to_anchor=(1.15, 1.12), fontsize=8)
     fig.tight_layout()
     fig.savefig(FIG_ROOT / "diversity_class_distribution.png", dpi=180, bbox_inches="tight")
     plt.close(fig)
-    log("  已保存 diversity_class_distribution.png")
+    log("  已保存 diversity_class_distribution.png（雷达图）")
 
 
 # --------------------------- 实验③：最近邻过拟合检验 ---------------------------
@@ -229,16 +247,16 @@ def exp_nearest_neighbor(n_query: int = 6) -> None:
         z = torch.randn(n_query, z_dim, generator=gen).to(DEVICE)
         with torch.no_grad():
             fake = generator(to_model_noise(model, z))
-        rows = []
+        fakes, reals = [], []
         ff = fake.view(n_query, -1)
         for i in range(n_query):
             d = torch.cdist(ff[i:i + 1], real_flat)  # (1, N)
             nn_idx = d.argmin(1).item()
-            rows.append(fake[i:i + 1].cpu())
-            rows.append(real[nn_idx:nn_idx + 1].cpu())
-        # 每行：生成图 | 最近邻真实图，共 n_query 行（nrow=2）
-        save_grid(torch.cat(rows, 0), FIG_ROOT / f"{model}_nearest_neighbor.png", nrow=2)
-        log(f"  {model}: 已保存最近邻对照（左生成/右最近邻真实，{n_query} 行）")
+            fakes.append(fake[i:i + 1].cpu())
+            reals.append(real[nn_idx:nn_idx + 1].cpu())
+        # 上行：生成图；下行：对应的最近邻真实图（2 x n_query 横向排列）
+        save_grid(torch.cat(fakes + reals, 0), FIG_ROOT / f"{model}_nearest_neighbor.png", nrow=n_query)
+        log(f"  {model}: 已保存最近邻对照（上行生成/下行最近邻真实，{n_query} 列）")
 
 
 # --------------------------- 实验④：判别器特征分类 ---------------------------
@@ -325,12 +343,14 @@ def main() -> None:
     FIG_ROOT.mkdir(parents=True, exist_ok=True)
     TABLE_ROOT.mkdir(parents=True, exist_ok=True)
 
+    clf = None
+    if "interp" in args.exp or "diversity" in args.exp:
+        clf = train_classifier()
     if "interp" in args.exp:
-        exp_interpolation()
+        exp_interpolation(clf)
     if "nn" in args.exp:
         exp_nearest_neighbor()
     if "diversity" in args.exp:
-        clf = train_classifier()
         exp_diversity(clf)
     if "dfeat" in args.exp:
         exp_discriminator_features()
